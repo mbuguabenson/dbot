@@ -58,11 +58,18 @@ const RedirectToNewTradersHub = () => {
     return <Redirect to={routes.traders_hub} />;
 };
 
+const BotRedirect = () => {
+    React.useLayoutEffect(() => {
+        window.location.replace(window.location.origin + '/bot/');
+    }, []);
+    return <Loading />;
+};
+
 const getModules = () => {
     const modules = [
         {
             path: routes.bot,
-            component: Bot,
+            component: BotRedirect,
             // Don't use `Localize` component since native html tag like `option` cannot render them
             getTitle: () => localize('Bot'),
         },

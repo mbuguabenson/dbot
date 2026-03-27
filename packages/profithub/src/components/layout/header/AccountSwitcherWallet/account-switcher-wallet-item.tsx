@@ -1,0 +1,98 @@
+import classNames from 'classnames';
+import { observer } from 'mobx-react-lite';
+import { formatMoney, getCurrencyDisplayCode } from '@/components/shared';
+import { AppLinkedWithWalletIcon } from '@/components/shared_ui/app-linked-with-wallet-icon';
+import Text from '@/components/shared_ui/text';
+import { useStore } from '@/hooks/useStore';
+import useStoreWalletAccountsList from '@/hooks/useStoreWalletAccountsList';
+import { Analytics } from '@deriv-com/analytics';
+import { Localize } from '@deriv-com/translations';
+import WalletBadge from '../wallets/wallet-badge';
+import './account-switcher-wallet-item.scss';
+
+type TAccountSwitcherWalletItemProps = {
+    account: Exclude<ReturnType<typeof useStoreWalletAccountsList>['data'], undefined>[number];
+    closeAccountsDialog: () => void;
+    show_badge?: boolean;
+};
+
+export const AccountSwitcherWalletItem = observer(
+    ({ closeAccountsDialog, account, show_badge = false }: TAccountSwitcherWalletItemProps) => {
+        const {
+            currency,
+            dtrade_loginid,
+            dtrade_balance,
+            gradients,
+            icons,
+            is_virtual,
+            landing_company_name,
+            icon_type,
+        } = account;
+
+        const {
+            ui: { is_dark_mode_on },
+            client,
+        } = useStore();
+        const { loginid: active_loginid, is_eu } = client;
+
+        const theme = is_dark_mode_on ? 'dark' : 'light';
+        const app_icon = is_dark_mode_on ? 'IcWalletOptionsDark' : 'IcWalletOptionsLight';
+        const is_dtrade_active = dtrade_loginid === active_loginid;
+
+        const switchAccount = async (loginId: string) => {
+            await client.switchAccount(loginId);
+
+            const account_type = loginId.match(/[a-zA-Z]+/g)?.join('') || '';
+            Analytics.setAttributes({
+                account_type,
+            });
+            closeAccountsDialog();
+        };
+
+        return (
+            <div
+                className={classNames('acc-switcher-wallet-item__container', {
+                    'acc-switcher-wallet-item__container--active': is_dtrade_active,
+                })}
+                data-testid='account-switcher-wallet-item'
+                onClick={() => switchAccount(dtrade_loginid)}
+                role='button'
+            >
+                <div>
+                    <AppLinkedWithWalletIcon
+                        app_icon={app_icon}
+                        gradient_class={gradients?.card[theme] ?? ''}
+                        type={icon_type}
+                        wallet_icon={icons?.[theme] ?? ''}
+                        hide_watermark
+                    />
+                </div>
+                <div className='acc-switcher-wallet-item__content'>
+                    <Text size='xxxs'>
+                        {is_eu ? (
+                            <Localize i18n_default_text='Multipliers' />
+                        ) : (
+                            <Localize i18n_default_text='Options' />
+                        )}
+                    </Text>
+                    <Text size='xxxs'>
+                        {is_virtual ? (
+                            <Localize i18n_default_text='Demo Wallet' />
+                        ) : (
+                            <Localize
+                                i18n_default_text='{{currency}} Wallet'
+                                values={{ currency: getCurrencyDisplayCode(currency) }}
+                            />
+                        )}
+                    </Text>
+                    <Text size='xs' weight='bold'>
+                        {`${formatMoney(currency ?? '', dtrade_balance || 0, true)} ${getCurrencyDisplayCode(
+                            currency
+                        )}`}
+                    </Text>
+                </div>
+                {show_badge && <WalletBadge is_demo={Boolean(is_virtual)} label={landing_company_name} />}
+            </div>
+        );
+    }
+);
