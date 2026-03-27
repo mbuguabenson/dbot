@@ -83,6 +83,16 @@ const initStore = (notification_messages, accounts) => {
     root_store.common.init();
     root_store.ui.init(notification_messages);
 
+    // Stub out disabled modules to prevent crashes on property access
+    root_store.modules.cashier = { 
+        general_store: { init: () => {} },
+        payment_agent: { init: () => {} },
+        onboarding: { init: () => {} },
+    };
+    root_store.modules.cfd = {
+        init: () => {},
+    };
+
     return root_store;
 };
 
