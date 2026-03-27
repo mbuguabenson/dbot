@@ -4,8 +4,8 @@ import { BrowserRouter as Router } from 'react-router-dom';
 import PropTypes from 'prop-types';
 
 import { APIProvider } from '@deriv/api';
-import { CashierStore } from '@deriv/cashier';
-import { CFDStore } from '@deriv/cfd';
+// import { CashierStore } from '@deriv/cashier';
+// import { CFDStore } from '@deriv/cfd';
 import { Loading } from '@deriv/components';
 import {
     initFormErrorMessages,

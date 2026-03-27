@@ -18,6 +18,7 @@ const copyConfig = base => {
         {
             from: path.resolve(__dirname, '../../../node_modules/@deriv/bot-web-ui/dist/bot/js/'),
             to: 'bot/js/',
+            noErrorOnMissing: true,
         },
         {
             from: path.resolve(__dirname, '../../../node_modules/@deriv/deriv-charts/dist'),
@@ -38,18 +39,22 @@ const copyConfig = base => {
         {
             from: path.resolve(__dirname, '../../../node_modules/@deriv/account/dist/account/js/'),
             to: 'account/js',
+            noErrorOnMissing: true,
         },
         {
             from: path.resolve(__dirname, '../../../node_modules/@deriv/account/dist/account/css/'),
             to: 'account/css',
+            noErrorOnMissing: true,
         },
         {
             from: path.resolve(__dirname, '../../../node_modules/@deriv/cashier/dist/cashier/js/'),
             to: 'cashier/js',
+            noErrorOnMissing: true,
         },
         {
             from: path.resolve(__dirname, '../../../node_modules/@deriv/cashier/dist/cashier/css/'),
             to: 'cashier/css',
+            noErrorOnMissing: true,
         },
         {
             from: path.resolve(__dirname, '../../../node_modules/@deriv/cashier/dist/cashier/public'),
@@ -59,22 +64,27 @@ const copyConfig = base => {
         {
             from: path.resolve(__dirname, '../../../node_modules/@deriv/trader/dist/trader'),
             to: 'trader',
+            noErrorOnMissing: true,
         },
         {
             from: path.resolve(__dirname, '../../../node_modules/@deriv/reports/dist/reports/js/'),
             to: 'reports/js',
+            noErrorOnMissing: true,
         },
         {
             from: path.resolve(__dirname, '../../../node_modules/@deriv/reports/dist/reports/css/'),
             to: 'reports/css',
+            noErrorOnMissing: true,
         },
         {
             from: path.resolve(__dirname, '../../../node_modules/@deriv/cfd/dist/cfd'),
             to: 'cfd',
+            noErrorOnMissing: true,
         },
         {
             from: path.resolve(__dirname, '../../../node_modules/@deriv/appstore/dist/appstore'),
             to: 'appstore',
+            noErrorOnMissing: true,
         },
         {
             from: path.resolve(__dirname, '../../../node_modules/@deriv/wallets/dist/wallets'),
