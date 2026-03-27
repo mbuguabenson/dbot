@@ -8,7 +8,6 @@ export const getSetting = (key: string) => {
     return settings[key];
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const storeSetting = (key: string, value: any) => {
     const settings = getSettingsFromLocal() || {};
     settings[key] = value;

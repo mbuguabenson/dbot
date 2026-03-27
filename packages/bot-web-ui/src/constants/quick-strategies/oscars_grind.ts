@@ -1,8 +1,8 @@
 import { getImageLocation } from '../../public-path';
-import { localize } from '@deriv/translations';
+import { localize } from '@deriv-com/translations';
 import { TDescriptionItem } from '../../pages/bot-builder/quick-strategy/types';
 
-export const OSCARS_GRIND: TDescriptionItem[] = [
+export const OSCARS_GRIND = (): TDescriptionItem[] => [
     {
         type: 'subtitle',
         content: [localize('Exploring the Oscar’s Grind strategy in Deriv Bot')],
@@ -29,7 +29,7 @@ export const OSCARS_GRIND: TDescriptionItem[] = [
         type: 'text',
         content: [
             localize(
-                '<strong>Initial stake:</strong> The amount that you are willing to place as a stake to enter a trade. This is the starting point for any changes in stake depending on the dynamic of the strategy being used.'
+                '<strong>Initial stake:</strong> The starting trade amount. Stake is reverted to this amount when a session completes.'
             ),
         ],
     },

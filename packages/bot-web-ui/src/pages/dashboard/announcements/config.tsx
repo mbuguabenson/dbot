@@ -1,11 +1,13 @@
 import React from 'react';
-import { OpenLiveChatLink, Text } from '@deriv/components';
-import { Localize, localize } from '@deriv/translations';
-import { DBOT_TABS } from 'Constants/bot-contents';
+import { getUrlBase } from '@/components/shared';
+import OpenLiveChatLink from '@/components/shared_ui/open-livechat-link';
+import Text from '@/components/shared_ui/text';
+import { DBOT_TABS } from '@/constants/bot-contents';
+import { Localize, localize } from '@deriv-com/translations';
 import { rudderStackSendOpenEvent } from '../../../analytics/rudderstack-common-events';
+import { showInstallPrompt } from '../../../utils/pwa-utils';
 import { handleOnConfirmAccumulator } from './utils/accumulator-helper-functions';
 import { IconAnnounce } from './announcement-components';
-import { getUrlBase } from '@deriv/shared';
 
 export type TContentItem = {
     id: number;
@@ -24,11 +26,6 @@ export type TAnnounce = {
     plain_text?: TContentItem[];
     media?: Array<string>;
     unordered_list?: TContentItem[];
-    event_name: string;
-    event_action?: {
-        confirm_button_text?: string;
-        cancel_button_text?: string;
-    };
 };
 
 export type TAnnouncement = {
@@ -48,13 +45,9 @@ export const ANNOUNCEMENTS: Record<string, TAnnouncement> = {
         announcement: {
             id: 'UPDATES_QUICK_STRATEGY_MODAL_ANNOUNCE',
             main_title: localize('Updates: Quick strategy modal'),
-            event_name: 'Updated: Quick Strategy Modal',
-            event_action: {
-                confirm_button_text: 'Explore now',
-            },
             confirm_button_text: localize('Explore now'),
             base_classname: 'announcement-dialog',
-            media: [getUrlBase('/public/videos/dbot-new-look-QS-and-accumulators-addition.gif')],
+            media: [getUrlBase('assets/images/dbot-new-look-QS-and-accumulators-addition.gif')],
             title: [
                 <Text key={0} as='div' align='left' size='xs' className='announcement-dialog__title'>
                     <Localize i18n_default_text="We've improved the Quick strategy (QS) modal for a better trading experience." />
@@ -100,10 +93,6 @@ export const ANNOUNCEMENTS: Record<string, TAnnouncement> = {
         announcement: {
             id: 'MOVING_STRATEGIES_ANNOUNCE',
             main_title: localize('Moving strategies to Deriv Bot'),
-            event_name: 'Moving strategies to Deriv Bot',
-            event_action: {
-                confirm_button_text: 'Import strategy',
-            },
             confirm_button_text: localize('Import strategy'),
             base_classname: 'announcement-dialog',
             title: (
@@ -144,9 +133,8 @@ export const ANNOUNCEMENTS: Record<string, TAnnouncement> = {
         onConfirm: () => {
             rudderStackSendOpenEvent({
                 subpage_name: 'bot_builder',
-                subform_source: 'announcements',
-                subform_name: 'load_strategy',
-                load_strategy_tab: 'recent',
+                subform_source: 'dashboard',
+                subform_name: 'quick_strategy',
             });
         },
     },
@@ -155,7 +143,6 @@ export const ANNOUNCEMENTS: Record<string, TAnnouncement> = {
         announcement: {
             id: 'BLOCKLY_ANNOUNCE',
             main_title: localize('Google Blockly v10 update'),
-            event_name: 'Google Blockly v10 update',
             base_classname: 'announcement-dialog',
             title: (
                 <Localize
@@ -196,11 +183,6 @@ export const ANNOUNCEMENTS: Record<string, TAnnouncement> = {
         announcement: {
             id: 'ACCUMULATOR_ANNOUNCE',
             main_title: localize('Accumulators now on Deriv Bot'),
-            event_name: 'Accumulators is now on Deriv Bot',
-            event_action: {
-                confirm_button_text: 'Try now',
-                cancel_button_text: 'Learn more',
-            },
             confirm_button_text: localize('Try now'),
             cancel_button_text: localize('Learn more'),
             base_classname: 'announcement-dialog',
@@ -226,11 +208,45 @@ export const ANNOUNCEMENTS: Record<string, TAnnouncement> = {
         switch_tab_on_confirm: DBOT_TABS.BOT_BUILDER,
         onConfirm: () => handleOnConfirmAccumulator(),
     },
+
+    PWA_INSTALL_ANNOUNCE: {
+        announcement: {
+            id: 'PWA_INSTALL_ANNOUNCE',
+            main_title: localize('Install Deriv Bot as an App'),
+            confirm_button_text: localize('Install Now'),
+            cancel_button_text: localize('Maybe later'),
+            base_classname: 'announcement-dialog announcement-dialog--pwa',
+            title: (
+                <Localize i18n_default_text='<0>Get the full app experience</0>' components={[<strong key={0} />]} />
+            ),
+            content: [
+                {
+                    id: 0,
+                    text: localize(
+                        'Install Deriv Bot directly on your device for faster access and better performance.'
+                    ),
+                },
+                {
+                    id: 1,
+                    text: localize('Work offline and get instant access from your desktop or home screen.'),
+                },
+                {
+                    id: 2,
+                    text: localize('Enjoy a native app-like experience with all the features you love.'),
+                },
+            ],
+        },
+        should_not_be_cancel: false,
+        onConfirm: () => {
+            // Trigger actual PWA install prompt
+            showInstallPrompt();
+        },
+    },
 };
 
 export type TAnnouncementItem = {
     id: string;
-    icon: React.ReactElement;
+    icon: React.ComponentType<{ announce: boolean }>;
     title: string;
     message: string;
     date: string;
@@ -254,6 +270,15 @@ export const BUTTON_ACTION_TYPE = {
 };
 
 export const BOT_ANNOUNCEMENTS_LIST: TAnnouncementItem[] = [
+    {
+        id: 'PWA_INSTALL_ANNOUNCE',
+        icon: IconAnnounce,
+        title: localize('Install Deriv Bot as an App'),
+        message: localize('Get faster access and better performance by installing Deriv Bot on your device.'),
+        date: '29 August 2025 00:00 UTC',
+        buttonAction: BUTTON_ACTION_TYPE.MODAL_BUTTON_ACTION,
+        actionText: '',
+    },
     {
         id: 'UPDATES_QUICK_STRATEGY_MODAL_ANNOUNCE',
         icon: IconAnnounce,

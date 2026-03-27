@@ -1,9 +1,9 @@
 import React from 'react';
-import debounce from 'lodash.debounce';
-import { observer } from '@deriv/stores';
-import { localize } from '@deriv/translations';
-import { DEBOUNCE_INTERVAL_TIME } from 'Constants/bot-contents';
-import { useDBotStore } from 'Stores/useDBotStore';
+import debounce from 'debounce';
+import { observer } from 'mobx-react-lite';
+import { DEBOUNCE_INTERVAL_TIME } from '@/constants/bot-contents';
+import { useStore } from '@/hooks/useStore';
+import { localize } from '@deriv-com/translations';
 import { rudderStackSendTutorialSearchEvent } from '../../../../analytics/rudderstack-tutorials';
 
 type TSearchInput = {
@@ -13,7 +13,7 @@ type TSearchInput = {
 };
 
 const SearchInput = observer(({ faq_value, setFaqSearchContent, prev_active_tutorials }: TSearchInput) => {
-    const { dashboard } = useDBotStore();
+    const { dashboard } = useStore();
     const input_ref = React.useRef(null);
     const { setActiveTabTutorial, filterTuotrialTab } = dashboard;
 

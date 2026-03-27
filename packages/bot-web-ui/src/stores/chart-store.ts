@@ -1,17 +1,12 @@
 import { action, computed, makeObservable, observable, reaction } from 'mobx';
-import {
-    ActiveSymbolsRequest,
-    ServerTimeRequest,
-    TicksHistoryRequest,
-    TicksStreamRequest,
-    TradingTimesRequest,
-} from '@deriv/api-types';
-import { ServerTime } from '@deriv/bot-skeleton';
-import { LocalStore } from '@deriv/shared';
+import { LocalStore } from '@/components/shared';
+import { api_base } from '@/external/bot-skeleton';
 import RootStore from './root-store';
 
-export const g_subscribers_map: Partial<Record<string, ReturnType<typeof WS.subscribeTicksHistory>>> = {};
-let WS: RootStore['ws'];
+type TSubscription = {
+    id: string | null;
+    subscriber: null | { unsubscribe: () => void };
+};
 
 export default class ChartStore {
     root_store: RootStore;
@@ -28,10 +23,11 @@ export default class ChartStore {
             updateChartType: action,
             setChartStatus: action,
             restoreFromStorage: action,
+            chart_subscription_id: observable,
+            setChartSubscriptionId: action,
         });
 
         this.root_store = root_store;
-        WS = root_store.ws;
         const { run_panel } = root_store;
 
         reaction(
@@ -42,6 +38,12 @@ export default class ChartStore {
         this.restoreFromStorage();
     }
 
+    subscription: TSubscription = {
+        id: null,
+        subscriber: null,
+    };
+    chart_subscription_id = '';
+
     symbol: string | undefined;
     is_chart_loading: boolean | undefined;
     chart_type: string | undefined;
@@ -49,8 +51,10 @@ export default class ChartStore {
 
     get is_contract_ended() {
         const { transactions } = this.root_store;
-
-        return transactions.contracts.length > 0 && transactions.contracts[0].is_ended;
+        const txns = transactions.transactions;
+        if (!txns || txns.length === 0) return false;
+        const first = txns[0]?.data;
+        return typeof first === 'object' && first !== null && 'is_ended' in first ? (first as any).is_ended : false;
     }
 
     onStartBot = () => {
@@ -64,15 +68,28 @@ export default class ChartStore {
     };
 
     updateSymbol = () => {
-        const workspace = window.Blockly.derivWorkspace;
-        const market_block = workspace.getAllBlocks().find((block: Blockly.Block) => {
-            return block.type === 'trade_definition_market';
-        });
-
-        if (market_block && market_block !== 'na') {
-            const symbol = market_block.getFieldValue('SYMBOL_LIST');
-            this.symbol = symbol;
+        // First try: get symbol from Blockly workspace
+        try {
+            const workspace = window.Blockly?.derivWorkspace;
+            const market_block = workspace?.getAllBlocks().find((block: any) => block.type === 'trade_definition_market');
+            const blockly_symbol = market_block?.getFieldValue('SYMBOL_LIST');
+            if (blockly_symbol) {
+                this.symbol = blockly_symbol;
+                return;
+            }
+        } catch {
+            // Blockly not ready yet — fall through
         }
+
+        // Second try: get from active_symbols list
+        const first_symbol = (api_base?.active_symbols as any[])?.[0]?.symbol as string | undefined;
+        if (first_symbol) {
+            this.symbol = first_symbol;
+            return;
+        }
+
+        // Third try: keep whatever was in storage (set during restoreFromStorage)
+        // symbol may already be set from storage, leave it unchanged
     };
 
     onSymbolChange = (symbol: string) => {
@@ -117,46 +134,15 @@ export default class ChartStore {
             } else {
                 this.granularity = 0;
                 this.chart_type = 'line';
+                // Default symbol for first-time users so chart renders immediately
+                this.symbol = 'R_100';
             }
         } catch {
             LocalStore.remove('bot.chart_props');
+            this.granularity = 0;
+            this.chart_type = 'line';
+            this.symbol = 'R_100';
         }
-    };
-
-    // #region WS
-    wsSubscribe = (req: TicksStreamRequest, callback: () => void) => {
-        if (req.subscribe === 1) {
-            const key = JSON.stringify(req);
-            const subscriber = WS.subscribeTicksHistory(req, callback);
-            g_subscribers_map[key] = subscriber;
-        }
-    };
-
-    wsForget = (req: TicksHistoryRequest) => {
-        const key = JSON.stringify(req);
-        if (g_subscribers_map[key]) {
-            g_subscribers_map[key]?.unsubscribe();
-            delete g_subscribers_map[key];
-        }
-    };
-
-    wsForgetStream = (stream_id: string) => {
-        WS.forgetStream(stream_id);
-    };
-
-    wsSendRequest = (req: TradingTimesRequest | ActiveSymbolsRequest | ServerTimeRequest) => {
-        if ('time' in req && req.time) {
-            return ServerTime.timePromise().then(() => {
-                return {
-                    msg_type: 'time',
-                    time: ServerTime.get().unix(),
-                };
-            });
-        }
-        if ('active_symbols' in req && req.active_symbols) {
-            return WS.activeSymbols();
-        }
-        if (WS.storage.send) return WS.storage.send(req);
     };
 
     getMarketsOrder = (active_symbols: { market: string; display_name: string }[]) => {
@@ -174,5 +160,8 @@ export default class ChartStore {
                 },
                 has_synthetic_index ? [synthetic_index] : []
             );
+    };
+    setChartSubscriptionId = (chartSubscriptionId: string) => {
+        this.chart_subscription_id = chartSubscriptionId;
     };
 }

@@ -1,19 +1,20 @@
 import { action, computed, makeObservable, observable, reaction, runInAction } from 'mobx';
+import { botNotification } from '@/components/bot-notification/bot-notification';
+import { notification_message } from '@/components/bot-notification/bot-notification-utils';
+import { isSafari, mobileOSDetect, standalone_routes } from '@/components/shared';
+import { redirectToSignUp } from '@/components/shared';
+import { contract_stages, TContractStage } from '@/constants/contract-stage';
+import { run_panel } from '@/constants/run-panel';
+import { ErrorTypes, MessageTypes, observer, unrecoverable_errors } from '@/external/bot-skeleton';
+import { getSelectedTradeType } from '@/external/bot-skeleton/scratch/utils';
+// import { journalError, switch_account_notification } from '@/utils/bot-notifications';
+import GTM from '@/utils/gtm';
+import { helpers } from '@/utils/store-helpers';
 import { Buy, ProposalOpenContract } from '@deriv/api-types';
-import { ErrorTypes, MessageTypes, observer, unrecoverable_errors } from '@deriv/bot-skeleton';
-import { isSafari, mobileOSDetect, routes } from '@deriv/shared';
 import { TStores } from '@deriv/stores/types';
-import { localize } from '@deriv/translations';
-import { botNotification } from 'Components/bot-notification/bot-notification';
-import { notification_message } from 'Components/bot-notification/bot-notification-utils';
-import { contract_stages, TContractStage } from 'Constants/contract-stage';
-import { run_panel } from 'Constants/run-panel';
-import { journalError, switch_account_notification } from 'Utils/bot-notifications';
-import GTM from 'Utils/gtm';
-import { helpers } from 'Utils/store-helpers';
+import { localize } from '@deriv-com/translations';
 import { TDbot } from 'Types';
 import RootStore from './root-store';
-import { getSelectedTradeType } from '@deriv/bot-skeleton/src/scratch/utils';
 
 export type TContractState = {
     buy?: Buy;
@@ -141,18 +142,26 @@ export default class RunPanelStore {
 
     setShowBotStopMessage = (show_bot_stop_message: boolean) => {
         this.show_bot_stop_message = show_bot_stop_message;
-        if (show_bot_stop_message)
-            botNotification(notification_message.bot_stop, {
-                label: localize('Reports'),
-                onClick: () => {
-                    const contract_type = getSelectedTradeType();
+        if (!show_bot_stop_message) return;
+        const handleNotificationClick = () => {
+            const contract_type = getSelectedTradeType();
+            const url = new URL(standalone_routes.positions);
+            url.searchParams.set('contract_type_bots', contract_type);
 
-                    const url = new URL(routes.positions, window.location.origin);
-                    url.searchParams.set('contract_type_bots', contract_type);
+            const getQueryParams = new URLSearchParams(window.location.search);
+            const account = getQueryParams.get('account') || sessionStorage.getItem('query_param_currency') || '';
 
-                    window.location.href = url.toString();
-                },
-            });
+            if (account) {
+                url.searchParams.set('account', account);
+            }
+
+            window.location.assign(url.toString());
+        };
+
+        botNotification(notification_message().bot_stop, {
+            label: localize('Reports'),
+            onClick: handleNotificationClick,
+        });
     };
 
     performSelfExclusionCheck = async () => {
@@ -175,7 +184,7 @@ export default class RunPanelStore {
                 }
             }, 10000);
         }
-        const { summary_card, route_prompt_dialog, self_exclusion } = this.root_store;
+        const { summary_card, self_exclusion } = this.root_store;
         const { client, ui } = this.core;
         const is_ios = mobileOSDetect() === 'iOS';
         this.dbot.saveRecentWorkspace();
@@ -205,14 +214,14 @@ export default class RunPanelStore {
             return;
         }
 
-        ui.setAccountSwitcherDisabledMessage(
+        ui?.setAccountSwitcherDisabledMessage(
             localize(
                 'Account switching is disabled while your bot is running. Please stop your bot before switching accounts.'
             )
         );
         runInAction(() => {
             this.setIsRunning(true);
-            ui.setPromptHandler(true, route_prompt_dialog.shouldNavigateAfterPrompt);
+            ui.setPromptHandler(true);
             this.toggleDrawer(true);
             this.run_id = `run-${Date.now()}`;
 
@@ -376,11 +385,21 @@ export default class RunPanelStore {
     };
 
     showLoginDialog = () => {
-        this.onOkButtonClick = this.onCloseDialog;
-        this.onCancelButtonClick = null;
+        // Only allow closing through the buttons
+        this.onOkButtonClick = () => {
+            redirectToSignUp();
+            this.is_dialog_open = false;
+        };
+        this.onCancelButtonClick = () => {
+            this.is_dialog_open = false;
+        };
         this.dialog_options = {
-            title: localize('Please log in'),
-            message: localize('You need to log in to run the bot.'),
+            title: localize('You are not logged in'),
+            message: localize('Please log in or sign up to start trading with us.'),
+            ok_button_text: localize('Sign up'),
+            cancel_button_text: localize('Log in'),
+            dismissable: false,
+            is_closed_on_cancel: false,
         };
         this.is_dialog_open = true;
     };
@@ -450,16 +469,19 @@ export default class RunPanelStore {
     OpenPositionLimitExceededEvent = () => (this.is_contracy_buying_in_progress = true);
 
     registerReactions = () => {
-        const { client, common, notifications } = this.core;
+        const { client, common } = this.core;
+        // eslint-disable-next-line prefer-const
         let disposeIsSocketOpenedListener: (() => void) | undefined, disposeLogoutListener: (() => void) | undefined;
 
         const registerIsSocketOpenedListener = () => {
+            // TODO: fix notifications
             if (common.is_socket_opened) {
                 disposeIsSocketOpenedListener = reaction(
                     () => client.loginid,
                     loginid => {
                         if (loginid && this.is_running) {
-                            notifications.addNotificationMessage(switch_account_notification);
+                            // TODO: fix notifications
+                            // notifications.addNotificationMessage(switch_account_notification());
                         }
                         this.dbot.terminateBot();
                         this.unregisterBotListeners();
@@ -532,18 +554,16 @@ export default class RunPanelStore {
         if (this.error_type === ErrorTypes.RECOVERABLE_ERRORS) {
             // Bot should indicate it started in below cases:
             // - When error happens it's a recoverable error
-            const trade_engine_options = this.dbot?.interpreter?.bot?.tradeEngine?.options;
-            if (trade_engine_options) {
-                const { shouldRestartOnError, timeMachineEnabled } = trade_engine_options;
-                const is_bot_recoverable = shouldRestartOnError || timeMachineEnabled;
+            const { shouldRestartOnError = false, timeMachineEnabled = false } =
+                this.dbot?.interpreter?.bot?.tradeEngine?.options ?? {};
+            const is_bot_recoverable = shouldRestartOnError || timeMachineEnabled;
 
-                if (is_bot_recoverable) {
-                    this.error_type = undefined;
-                    this.setContractStage(contract_stages.PURCHASE_SENT);
-                } else {
-                    this.setIsRunning(false);
-                    indicateBotStopped();
-                }
+            if (is_bot_recoverable) {
+                this.error_type = undefined;
+                this.setContractStage(contract_stages.PURCHASE_SENT);
+            } else {
+                this.setIsRunning(false);
+                indicateBotStopped();
             }
         } else if (this.error_type === ErrorTypes.UNRECOVERABLE_ERRORS) {
             // Bot should indicate it stopped in below cases:
@@ -594,7 +614,7 @@ export default class RunPanelStore {
                 const { is_virtual } = this.core.client;
 
                 if (!is_virtual && buy) {
-                    this.core.gtm.pushDataLayer({ event: 'dbot_purchase', buy_price: buy.buy_price });
+                    GTM?.pushDataLayer?.({ event: 'dbot_purchase', buy_price: buy.buy_price });
                 }
 
                 break;
@@ -631,7 +651,6 @@ export default class RunPanelStore {
         }
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError = (data: { error: any }) => {
         // data.error for API errors, data for code errors
         const error = data.error || data;
@@ -648,26 +667,28 @@ export default class RunPanelStore {
 
     showErrorMessage = (data: string | Error) => {
         const { journal } = this.root_store;
-        const { notifications, ui } = this.core;
+        const { ui } = this.core;
         journal.onError(data);
         if (journal.journal_filters.some(filter => filter === MessageTypes.ERROR)) {
             this.toggleDrawer(true);
             this.setActiveTabIndex(run_panel.JOURNAL);
             ui.setPromptHandler(false);
         } else {
-            notifications.addNotificationMessage(journalError(this.switchToJournal));
-            notifications.removeNotificationMessage({ key: 'bot_error' });
+            // TODO: fix notifications
+            // notifications.addNotificationMessage(journalError(this.switchToJournal));
+            // notifications.removeNotificationMessage({ key: 'bot_error' });
         }
     };
 
     switchToJournal = () => {
         const { journal } = this.root_store;
-        const { notifications } = this.core;
         journal.journal_filters.push(MessageTypes.ERROR);
         this.setActiveTabIndex(run_panel.JOURNAL);
         this.toggleDrawer(true);
-        notifications.toggleNotificationsModal();
-        notifications.removeNotificationByKey({ key: 'bot_error' });
+
+        // TODO: fix notifications
+        // notifications.toggleNotificationsModal();
+        // notifications.removeNotificationByKey({ key: 'bot_error' });
     };
 
     unregisterBotListeners = () => {
@@ -718,8 +739,6 @@ export default class RunPanelStore {
     };
 
     handleInvalidToken = async () => {
-        const { client } = this.core;
-        await client.logout();
         this.setActiveTabIndex(run_panel.SUMMARY);
     };
 

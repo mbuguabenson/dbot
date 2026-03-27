@@ -1,16 +1,16 @@
 import localForage from 'localforage';
 import LZString from 'lz-string';
 import { action, makeObservable, observable } from 'mobx';
+import { MAX_STRATEGIES } from '@/constants/bot-contents';
+import { button_status } from '@/constants/button-status';
 import {
     getSavedWorkspaces,
     observer as globalObserver,
     save,
     save_types,
     saveWorkspaceToRecent,
-} from '@deriv/bot-skeleton';
-import { localize } from '@deriv/translations';
-import { MAX_STRATEGIES } from 'Constants/bot-contents';
-import { button_status } from 'Constants/button-status';
+} from '@/external/bot-skeleton';
+import { localize } from '@deriv-com/translations';
 import { TStrategy } from 'Types';
 import RootStore from './root-store';
 
@@ -30,6 +30,9 @@ interface ISaveModalStore {
     updateBotName: (bot_name: string) => void;
     setButtonStatus: (status: { [key: string]: string } | string | number) => void;
 }
+
+const Blockly = window.Blockly;
+
 export default class SaveModalStore implements ISaveModalStore {
     root_store: RootStore;
 
@@ -42,6 +45,7 @@ export default class SaveModalStore implements ISaveModalStore {
             validateBotName: action.bound,
             onConfirmSave: action.bound,
             updateBotName: action.bound,
+            onDriveConnect: action.bound,
             setButtonStatus: action.bound,
         });
 
@@ -160,7 +164,7 @@ export default class SaveModalStore implements ISaveModalStore {
         this.updateBotName(bot_name);
 
         if (active_tab === 0) {
-            const workspace_id = selected_strategy.id ?? window.Blockly?.utils?.genUid();
+            const workspace_id = selected_strategy.id ?? Blockly?.utils?.genUid();
             await this.addStrategyToWorkspace(workspace_id, is_local, save_as_collection, bot_name, xml);
             if (main_strategy) await loadStrategyToBuilder(main_strategy);
         } else {
@@ -171,6 +175,16 @@ export default class SaveModalStore implements ISaveModalStore {
 
     updateBotName = (bot_name: string): void => {
         this.bot_name = bot_name;
+    };
+
+    onDriveConnect = async () => {
+        const { google_drive } = this.root_store;
+
+        if (google_drive.is_authorised) {
+            google_drive.signOut();
+        } else {
+            google_drive.signIn();
+        }
     };
 
     setButtonStatus = (status: { [key: string]: string } | string | number) => {

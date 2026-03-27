@@ -1,7 +1,7 @@
 import { action, computed, makeObservable, observable, reaction } from 'mobx';
+import { formatDate, isEnded } from '@/components/shared';
+import { LogTypes } from '@/external/bot-skeleton';
 import { ProposalOpenContract } from '@deriv/api-types';
-import { LogTypes } from '@deriv/bot-skeleton';
-import { formatDate, isEnded } from '@deriv/shared';
 import { TPortfolioPosition, TStores } from '@deriv/stores/types';
 import { TContractInfo } from '../components/summary/summary-card.types';
 import { transaction_elements } from '../constants/transactions';
@@ -68,7 +68,7 @@ export default class TransactionsStore {
         );
         const statistics = trxs.reduce(
             (stats, { data }) => {
-                const { profit = 0, is_completed = false, payout, buy_price = 0, bid_price } = data as TContractInfo;
+                const { profit = 0, is_completed = false, buy_price = 0, payout, bid_price } = data as TContractInfo;
                 if (is_completed) {
                     if (profit > 0) {
                         stats.won_contracts += 1;
@@ -170,7 +170,9 @@ export default class TransactionsStore {
     }
 
     clear() {
-        this.elements[this.core?.client?.loginid as string] = [];
+        if (this.elements && this.elements[this.core?.client?.loginid as string]?.length > 0) {
+            this.elements[this.core?.client?.loginid as string] = [];
+        }
         this.recovered_completed_transactions = this.recovered_completed_transactions?.slice(0, 0);
         this.recovered_transactions = this.recovered_transactions?.slice(0, 0);
         this.is_transaction_details_modal_open = false;
@@ -251,8 +253,10 @@ export default class TransactionsStore {
         });
     }
 
-    recoverPendingContractsById(contract_id: number, contract: ProposalOpenContract | null = null) {
-        const positions = this.core.portfolio.positions;
+    async recoverPendingContractsById(contract_id: number, contract: ProposalOpenContract | null = null) {
+        // TODO: need to fix as the portfolio is not available now
+        // const positions = this.core.portfolio.positions;
+        const positions: unknown[] = [];
 
         if (contract) {
             this.is_called_proposal_open_contract = true;

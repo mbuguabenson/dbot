@@ -1,12 +1,11 @@
-// TODO: need to convert Dbot class to TS and write complete types
-export type TDbot = {
+export type TBotSkeleton = {
     interpreter: unknown;
-    workspace: Blockly.WorkspaceSvg | null;
+    workspace: window.Blockly.WorkspaceSvg | null;
     before_run_funcs: (() => boolean)[];
     initWorkspace: (
         public_path: string,
         store: unknown,
-        api_helpers_store: unknown,
+        // api_helpers_store: unknown,
         is_mobile: boolean
     ) => Promise<void>;
     saveRecentWorkspace: () => void;
@@ -19,16 +18,13 @@ export type TDbot = {
     terminateConnection: () => void;
     unselectBlocks: () => boolean;
     disableStrayBlocks: () => boolean;
-    disableBlocksRecursively: (block: Blockly.Block) => void;
+    disableBlocksRecursively: (block: window.Blockly.Block) => void;
     checkForErroredBlocks: () => boolean;
     centerAndHighlightBlock: (block_id: string, should_animate?: boolean) => void;
     unHighlightAllBlocks: () => void;
     checkForRequiredBlocks: () => boolean;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    valueInputLimitationsListener: (event: any, force_check?: boolean) => void | boolean;
+    valueInputLimitationsListener: (event: unknown, force_check?: boolean) => void | boolean;
     getStrategySounds: () => unknown[];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    handleDragOver?: (event: any) => void;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    handleDropOver?: (event: any, handleFileChange: () => void) => void;
+    handleDragOver?: (event: unknown) => void;
+    handleDropOver?: (event: unknown, handleFileChange: () => void) => void;
 };

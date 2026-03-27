@@ -1,91 +1,45 @@
-# Binary Bot
+# Create Deriv V2
 
-Visual automation for binary.com [bot.binary.com](https://bot.binary.com)
+This template was generated using `create-deriv-v2`
 
-[![Build Status](https://travis-ci.org/binary-com/binary-bot.svg?branch=master)](https://travis-ci.org/binary-com/binary-bot)
-[![Coverage Status](https://coveralls.io/repos/github/binary-com/binary-bot/badge.svg?branch=master)](https://coveralls.io/github/binary-com/binary-bot?branch=master)
+## Getting started
 
-**In this document**
+To run the development server:
 
--   [Other documents](#other-documents)
--   [Development](#development)
-    -   [Deploying to local gh-pages](#deploying-to-local-gh-pages)
--   [Release](#release)
--   [To update to latest version](#to-update-to-latest-version)
--   [Running the CLI command](#running-the-cli-command)
-
-## Other documents
-
--   [General](docs/README.md) - Contains general philosophy and overview of this package
--   [Modules docs](docs/Modules/README.md) - Contains implementation guides (i.e., scaffolding, code usage)
-
-Visit [wiki](https://github.com/binary-com/binary-bot/wiki) for more info.
-
-## Development
-
-```
-git clone https://github.com/binary-com/binary-bot.git
-cd binary-bot
-git checkout dev
-npm install
-npm start
+```bash
+npm run dev
 ```
 
-**Note:** Please branch your work from dev, and make sure your local dev is up-to-date with upstream
+To generate a build:
 
-### Deploying to local gh-pages
-
-```
-npm run release --branch [branchname] # can contain /
+```bash
+npm run build
 ```
 
-## Release
+## Deploying to Cloudflare Pages
 
-```
-gulp test-deploy # for local test deploy
-npm run release --branch <branch-name> # to deploy a branch (eg., beta)
-npm run release-production # to release it to production
-```
+In order to generate a deployment to Cloudflare Pages, ensure that the following secrets are set in the Github Actions:
 
-## To update to latest version
-
-```
-git pull --rebase upstream dev
-npm install
+```bash
+CLOUDFLARE_ACCOUNT_ID=****
+CLOUDFLARE_API_TOKEN=****
+CLOUDFLARE_PROJECT_NAME=****
 ```
 
-## Running the CLI command
+## Generating a test link preview to Cloudflare Pages
 
-```
-npm i -g binary-bot
-bot -h // For a quick help
-bot bot-example.js
-```
+In order to generate a test link deployment to Cloudflare Pages, ensure that the following secrets are set in the Github Actions:
 
-### Running with a specific endpoint
-
-**Use only if you know what you're doing**
-
-```
-ENDPOINT='wss://ws.derivws.com/websockets/v3?l=en&app_id=1169' bot bot-example.js
+```bash
+CLOUDFLARE_ACCOUNT_ID=****
+CLOUDFLARE_TEST_LINK_TOKEN=****
+CLOUDFLARE_PROJECT_NAME=****
 ```
 
-### CLI examples:
+## Notifications to Slack
 
-[`speed-test.js`](https://github.com/binary-com/binary-bot/blob/master/cli-examples/speed-test.js)
+To allow notifications to be sent to Slack whenever a new staging build is triggered, ensure that the following secrets are set in the Github Actions:
 
-## Think you found a bug?
-
-There's a chance that we already know about it and doing our best to fix it. To find out you can search our [GitHub issues](https://github.com/binary-com/binary-bot/issues)
-
-Not satisfied yet? Please create a new issue, and explain to us what is the nature of the problem and how to reproduce [here](https://github.com/binary-com/binary-bot/issues/new)
-
-## We'd love to hear from you
-
-Please send us your inquiries through marketing@binary.com
-
-## Sample Blocks
-
-You can find some example blocks in the [`Examples`](/examples) folder.
-
-**Disclaimer**: _All the files and codes in the above links are intended for educational and informational purposes only. They should not be construed as giving investment advice, and you should not rely on them as your singular factor in making or refraining from making any investment decisions. Binary.com accepts no liability whatsoever for any losses incurred by users in their trading. Binary options trading may incur losses as well as gains._
+```bash
+SLACK_WEBHOOK=***
+```

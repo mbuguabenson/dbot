@@ -1,9 +1,10 @@
 import React from 'react';
-import { getSavedWorkspaces } from '@deriv/bot-skeleton';
-import { Text } from '@deriv/components';
-import { observer, useStore } from '@deriv/stores';
-import { Localize, localize } from '@deriv/translations';
-import { useDBotStore } from 'Stores/useDBotStore';
+import { observer } from 'mobx-react-lite';
+import Text from '@/components/shared_ui/text';
+import { getSavedWorkspaces } from '@/external/bot-skeleton';
+import { useStore } from '@/hooks/useStore';
+import { Localize, localize } from '@deriv-com/translations';
+import { useDevice } from '@deriv-com/ui';
 import DeleteDialog from './delete-dialog';
 import RecentWorkspace from './recent-workspace';
 import './index.scss';
@@ -29,11 +30,10 @@ const HEADERS: THeader[] = [
 ];
 
 const DashboardBotList = observer(() => {
-    const { load_modal, dashboard } = useDBotStore();
+    const { load_modal, dashboard } = useStore();
     const { setDashboardStrategies, dashboard_strategies } = load_modal;
     const { setStrategySaveType, strategy_save_type } = dashboard;
-    const { ui } = useStore();
-    const { is_desktop } = ui;
+    const { isDesktop } = useDevice();
     const get_first_strategy_info = React.useRef(false);
     const get_instacee = React.useRef(false);
 
@@ -63,7 +63,7 @@ const DashboardBotList = observer(() => {
         <div className='bot-list__container'>
             <div className='bot-list__wrapper'>
                 <div className='bot-list__title'>
-                    <Text size={is_desktop ? 's' : 'xs'} weight='bold'>
+                    <Text size={isDesktop ? 's' : 'xs'} weight='bold'>
                         <Localize i18n_default_text='Your bots:' />
                     </Text>
                 </div>
@@ -71,7 +71,7 @@ const DashboardBotList = observer(() => {
                     {HEADERS.map(({ label, className }) => {
                         return (
                             <div className={className} key={label}>
-                                <Text size={is_desktop ? 'xs' : 'xxs'} weight='bold'>
+                                <Text size={isDesktop ? 'xs' : 'xxs'} weight='bold'>
                                     {label}
                                 </Text>
                             </div>

@@ -47,22 +47,21 @@ const Cashier = React.lazy(() =>
     })
 );
 
-const Bot = React.lazy(() =>
-    moduleLoader(() => {
-        // eslint-disable-next-line import/no-unresolved
-        return import(/* webpackChunkName: "bot-web-ui-app" */ '@deriv/bot-web-ui');
-    })
-);
+const BotRedirect = () => {
+    React.useLayoutEffect(() => {
+        if (window.location.hostname === 'localhost') {
+            window.location.href = 'http://localhost:3000';
+            return;
+        }
+        if (!window.location.pathname.startsWith('/bot/')) {
+            window.location.replace('/bot/');
+        }
+    }, []);
+    return <Loading />;
+};
 
 const RedirectToNewTradersHub = () => {
     return <Redirect to={routes.traders_hub} />;
-};
-
-const BotRedirect = () => {
-    React.useLayoutEffect(() => {
-        window.location.replace(window.location.origin + '/bot/');
-    }, []);
-    return <Loading />;
 };
 
 const getModules = () => {

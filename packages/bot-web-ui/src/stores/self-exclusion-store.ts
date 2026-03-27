@@ -1,4 +1,6 @@
 import { action, computed, makeObservable, observable } from 'mobx';
+import { api_base } from '@/external/bot-skeleton';
+import { V2GetActiveClientId } from '@/external/bot-skeleton/services/api/appId';
 import { TStores } from '@deriv/stores/types';
 import RootStore from './root-store';
 
@@ -62,10 +64,23 @@ export default class SelfExclusionStore {
     }
 
     async checkRestriction() {
-        const { client } = this.core;
-        await client.getSelfExclusion();
-        if (client.self_exclusion.max_losses) {
-            this.setApiMaxLosses(client.self_exclusion.max_losses);
+        if (api_base.api && api_base.is_authorized && V2GetActiveClientId()) {
+            try {
+                const response = await api_base.api.getSelfExclusion();
+                const { get_self_exclusion }: { get_self_exclusion: { max_losses?: number } } = response;
+                const { max_losses: maxLosses } = get_self_exclusion;
+                if (maxLosses) {
+                    this.setApiMaxLosses(maxLosses);
+                }
+            } catch (error: any) {
+                const error_code = error?.code || error?.error?.code;
+
+                if (error_code === 'AuthorizationRequired') {
+                    this.core.client.logout();
+                    return;
+                }
+                console.error('Error fetching self-exclusion data:', error);
+            }
         }
     }
 }

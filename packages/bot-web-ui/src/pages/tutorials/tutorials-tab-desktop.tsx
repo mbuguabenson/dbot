@@ -1,8 +1,10 @@
 import React from 'react';
 import classNames from 'classnames';
-import { Icon, Tabs } from '@deriv/components';
-import { observer } from '@deriv/stores';
-import { useDBotStore } from 'Stores/useDBotStore';
+import { observer } from 'mobx-react-lite';
+import Tabs from '@/components/shared_ui/tabs';
+import { useStore } from '@/hooks/useStore';
+import { LabelPairedSearchCaptionRegularIcon } from '@deriv/quill-icons/LabelPaired';
+import { LegacyCloseCircle1pxBlackIcon } from '@deriv/quill-icons/Legacy';
 import SearchInput from './common/search-input';
 import { TTutorialsTabItem } from './tutorials';
 
@@ -12,7 +14,7 @@ type TTutorialsTabDesktop = {
 };
 
 const TutorialsTabDesktop = observer(({ tutorial_tabs, prev_active_tutorials }: TTutorialsTabDesktop) => {
-    const { dashboard } = useDBotStore();
+    const { dashboard } = useStore();
 
     const { active_tab_tutorials, faq_search_value, setActiveTabTutorial, setFAQSearchValue, resetTutorialTabContent } =
         dashboard;
@@ -34,12 +36,12 @@ const TutorialsTabDesktop = observer(({ tutorial_tabs, prev_active_tutorials }: 
     return (
         <div className='dc-tabs__wrapper' data-testid='tutorials-tab-desktop'>
             <div className='dc-tabs__wrapper__group'>
-                <Icon
+                <LabelPairedSearchCaptionRegularIcon
+                    height='20px'
+                    width='20px'
                     className='search-icon'
-                    data_testid='id-test-search'
-                    width='1.6rem'
-                    height='1.6rem'
-                    icon='IcSearch'
+                    data-testid='id-test-search'
+                    fill='var(--text-general)'
                 />
                 <SearchInput
                     faq_value={faq_search_value}
@@ -47,15 +49,28 @@ const TutorialsTabDesktop = observer(({ tutorial_tabs, prev_active_tutorials }: 
                     prev_active_tutorials={prev_active_tutorials}
                 />
                 {search && (
-                    <Icon
+                    <LegacyCloseCircle1pxBlackIcon
+                        height='18px'
+                        width='18px'
                         className='close-icon'
-                        data_testid='id-test-close'
-                        width='1.6rem'
-                        height='1.6rem'
-                        icon='IcDbotClose'
+                        data-testid='id-test-close'
                         onClick={onCloseHandleSearch}
+                        fill='var(--text-general)'
                     />
                 )}
+            </div>
+            <div className='tutorials-header-actions'>
+                <button
+                    className='btn-customer-care'
+                    onClick={() =>
+                        window.open(
+                            'https://api.whatsapp.com/send/?phone=254796428848&text&type=phone_number&app_absent=0',
+                            '_blank'
+                        )
+                    }
+                >
+                    <span className='whatsapp-icon'>💬</span> Customer Care
+                </button>
             </div>
             <Tabs
                 className={classNames('tutorials', {
@@ -68,14 +83,16 @@ const TutorialsTabDesktop = observer(({ tutorial_tabs, prev_active_tutorials }: 
                 onTabItemClick={setActiveTabTutorial}
                 top
             >
-                {tutorial_tabs?.map(
-                    ({ label, content }) =>
-                        content && (
-                            <div label={label} key={`${content}_${label}`}>
-                                {content}
-                            </div>
-                        )
-                )}
+                <>
+                    {tutorial_tabs?.map(
+                        ({ label, content }) =>
+                            content && (
+                                <div label={label} key={`${content}_${label}`}>
+                                    {content}
+                                </div>
+                            )
+                    )}
+                </>
             </Tabs>
         </div>
     );

@@ -1,17 +1,30 @@
 {
-    "extends": "../../tsconfig.json",
     "compilerOptions": {
-        "experimentalDecorators": true,
-        "outDir": "./dist",
-        "baseUrl": "./",
+        "target": "ES2020",
+        "useDefineForClassFields": true,
+        "lib": ["ES2020", "DOM", "DOM.Iterable"],
+        "module": "ESNext",
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": false,
+        "moduleResolution": "bundler",
+        "allowImportingTsExtensions": true,
+        "resolveJsonModule": true,
+        "isolatedModules": true,
+        "noEmit": true,
+        "jsx": "react-jsx",
+        "strict": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noFallthroughCasesInSwitch": true,
+        "allowJs": true,
+        "baseUrl": "./src",
         "paths": {
-            "Components/*": ["src/components/*"],
-            "Constants/*": ["src/constants/*"],
-            "Stores/*": ["src/stores/*"],
-            "Utils/*": ["src/utils/*"],
-            "@deriv/*": ["../*/src"],
-            "Types": ["src/types"],
-        }
+            "@/*": ["./*"],
+            "@deriv/stores/*": ["./packages/stores/src/*"],
+            "@deriv/components": ["./packages/components/src"],
+            "@deriv/components/*": ["./packages/components/src/*"]
+        },
+        "esModuleInterop": true
     },
-    "include": ["src", "../../utils.d.ts", "src/types/global.d.ts"],
+    "include": ["src"]
 }

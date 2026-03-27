@@ -1,57 +1,63 @@
 import { reaction } from 'mobx';
+import { TStatistics } from '@/components/transaction-details/transaction-details.types';
+import RootStore from '@/stores/root-store';
 import { ProposalOpenContract } from '@deriv/api-types';
-import { TCoreStores, TStores } from '@deriv/stores/types';
-import { TStatistics } from 'Components/transaction-details/transaction-details.types';
-import RootStore from 'Stores/root-store';
-
-type TGTM = {
-    core: {
-        client: {
-            loginid: string;
-        };
-        server_time: {
-            unix: () => number;
-        };
-        gtm: {
-            pushDataLayer: (data: Record<string, unknown>) => void;
-        };
-    };
-};
 
 const GTM = (() => {
-    let root_store: RootStore & TGTM;
-
-    const getLoginId = (): string => {
-        return root_store.core.client.loginid;
+    let timeoutId: NodeJS.Timeout;
+    let initialized = false;
+    const pushDataLayer = (data: { [key: string]: string | number | boolean; event: string }): void => {
+        window.dataLayer?.push(data);
     };
 
-    const getServerTime = (): number => {
-        return root_store?.core?.server_time?.unix() || Date.now();
-    };
+    const init = (_root_store: RootStore): void => {
+        if (initialized) return;
+        initialized = true;
 
-    const pushDataLayer = (data: Record<string, unknown>): void => {
-        return root_store?.core?.gtm?.pushDataLayer(data);
-    };
+        function loadGTM() {
+            (function (w, d, s, l, i) {
+                w[l] = w[l] || [];
+                w[l].push({
+                    'gtm.start': new Date().getTime(),
+                    event: 'gtm.js',
+                });
+                const f = d.getElementsByTagName(s)[0],
+                    j = d.createElement(s),
+                    dl = l != 'dataLayer' ? '&l=' + l : '';
+                j.defer = true;
+                j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
+                f.parentNode.insertBefore(j, f);
+            })(window, document, 'script', 'dataLayer', 'GTM-NF7884S');
+        }
 
-    const init = (_root_store: RootStore & TStores & TCoreStores & { core: TGTM['core'] }): void => {
+        setTimeout(() => {
+            loadGTM();
+        }, 3000);
+
         try {
-            root_store = _root_store;
-            const { run_panel, transactions } = root_store;
-            const run_statistics = transactions.statistics;
-
+            const { run_panel, transactions, client, common } = _root_store;
             reaction(
                 () => run_panel.is_running,
-                () => run_panel.is_running && onRunBot(run_statistics)
+                (() => {
+                    return () => {
+                        if (run_panel.is_running) {
+                            clearTimeout(timeoutId);
+                            timeoutId = setTimeout(() => {
+                                onRunBot(client?.loginid, common?.server_time?.unix(), transactions?.statistics);
+                            }, 500);
+                        }
+                    };
+                })()
             );
         } catch (error) {
             // eslint-disable-next-line no-console
-            console.warn('Error initializing GTM reactions ', error); // eslint-disable-line no-console
+            console.warn('Error initializing GTM reactions ', error);
         }
     };
 
-    const onRunBot = (statistics: TStatistics): void => {
+    const onRunBot = (login_id: string, server_time: number, statistics: TStatistics): void => {
         try {
-            const run_id = `${getLoginId()}-${getServerTime()}`;
+            const run_id = `${login_id}-${server_time}`;
             const counters = `tr:${statistics.number_of_runs},\
                 ts:${statistics.total_stake},\
                 py:${statistics.total_payout},\
@@ -73,7 +79,7 @@ const GTM = (() => {
     const onTransactionClosed = (contract: ProposalOpenContract): void => {
         const data = {
             event: 'dbot_run_transaction',
-            reference_id: contract.contract_id,
+            reference_id: contract?.contract_id ?? '',
         };
         pushDataLayer(data);
     };

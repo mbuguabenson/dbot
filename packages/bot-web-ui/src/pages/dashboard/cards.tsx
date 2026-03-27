@@ -1,153 +1,153 @@
 import React from 'react';
 import classNames from 'classnames';
-import { Icon, Text } from '@deriv/components';
-import { observer } from '@deriv/stores';
-import { localize } from '@deriv/translations';
-import { DBOT_TABS } from 'Constants/bot-contents';
-import { useDBotStore } from 'Stores/useDBotStore';
-import { rudderStackSendOpenEvent } from '../../analytics/rudderstack-common-events';
-import { rudderStackSendDashboardClickEvent } from '../../analytics/rudderstack-dashboard';
-import DashboardBotList from './bot-list/dashboard-bot-list';
+import { observer } from 'mobx-react-lite';
+import { useStore } from '@/hooks/useStore';
+import { localize } from '@deriv-com/translations';
+import Text from '@/components/shared_ui/text';
+import {
+    LabelPairedPuzzlePieceTwoCaptionBoldIcon,
+    LabelPairedLightbulbCaptionRegularIcon,
+    LabelPairedCopyCaptionRegularIcon,
+    LabelPairedSlidersCaptionRegularIcon,
+    LabelPairedFolderOpenCaptionRegularIcon,
+    LabelPairedChartLineCaptionRegularIcon,
+    LabelPairedCircleDotCaptionRegularIcon,
+} from '@deriv/quill-icons/LabelPaired';
+import { DBOT_TABS } from '@/constants/bot-contents';
 
 type TCardProps = {
     has_dashboard_strategies: boolean;
     is_mobile: boolean;
+    search_query: string;
+    handleTabChange: (index: number) => void;
 };
 
-type TCardArray = {
-    type: string;
-    icon: string;
-    content: string;
-    callback: () => void;
-};
+interface QuickAccessItem {
+    id: string;
+    title: string;
+    icon: React.ElementType;
+    description: string;
+    tabIndex: number;
+    tag?: string;
+    tagType?: 'hot' | 'trending' | 'primary' | 'popular' | 'pro';
+}
 
-const Cards = observer(({ is_mobile, has_dashboard_strategies }: TCardProps) => {
-    const { dashboard, load_modal, quick_strategy } = useDBotStore();
-    const { toggleLoadModal, setActiveTabIndex } = load_modal;
-    const { is_dialog_open, setActiveTab } = dashboard;
-    const { setFormVisibility } = quick_strategy;
+const Cards = observer(({ search_query, handleTabChange }: TCardProps) => {
+    const { load_modal } = useStore();
 
-    const openGoogleDriveDialog = () => {
-        toggleLoadModal();
-        setActiveTabIndex(is_mobile ? 1 : 2);
-        setActiveTab(DBOT_TABS.BOT_BUILDER);
-    };
-
-    const openFileLoader = () => {
-        toggleLoadModal();
-        setActiveTabIndex(is_mobile ? 0 : 1);
-        setActiveTab(DBOT_TABS.BOT_BUILDER);
-    };
-
-    const actions: TCardArray[] = [
+    const quickAccessItems: QuickAccessItem[] = [
         {
-            type: 'my-computer',
-            icon: is_mobile ? 'IcLocal' : 'IcMyComputer',
-            content: is_mobile ? localize('Local') : localize('My computer'),
-            callback: () => {
-                openFileLoader();
-                rudderStackSendOpenEvent({
-                    subpage_name: 'bot_builder',
-                    subform_source: 'dashboard',
-                    subform_name: 'load_strategy',
-                    load_strategy_tab: 'local',
-                });
-            },
+            id: 'load-bot',
+            title: localize('Load Bot'),
+            icon: LabelPairedFolderOpenCaptionRegularIcon,
+            description: localize('Upload an existing bot from your local drive or cloud'),
+            tabIndex: -1,
+            tag: localize('Primary'),
+            tagType: 'primary',
         },
         {
-            type: 'google-drive',
-            icon: 'IcGoogleDriveDbot',
-            content: localize('Google Drive'),
-            callback: () => {
-                openGoogleDriveDialog();
-                rudderStackSendOpenEvent({
-                    subpage_name: 'bot_builder',
-                    subform_source: 'dashboard',
-                    subform_name: 'load_strategy',
-                    load_strategy_tab: 'google drive',
-                });
-            },
+            id: 'bot-builder',
+            title: localize('Bot Builder'),
+            icon: LabelPairedPuzzlePieceTwoCaptionBoldIcon,
+            description: localize('Create and customize trading bots using blocks'),
+            tabIndex: DBOT_TABS.BOT_BUILDER,
+            tag: localize('Trending'),
+            tagType: 'trending',
         },
         {
-            type: 'bot-builder',
-            icon: 'IcBotBuilder',
-            content: localize('Bot Builder'),
-            callback: () => {
-                setActiveTab(DBOT_TABS.BOT_BUILDER);
-                rudderStackSendDashboardClickEvent({
-                    dashboard_click_name: 'bot_builder',
-                    subpage_name: 'bot_builder',
-                });
-            },
+            id: 'auto-trader',
+            title: localize('Auto Trader'),
+            icon: LabelPairedSlidersCaptionRegularIcon,
+            description: localize('Automate your trades with advanced strategies'),
+            tabIndex: DBOT_TABS.AUTO_TRADER,
+            tag: localize('Hot'),
+            tagType: 'hot',
         },
         {
-            type: 'quick-strategy',
-            icon: 'IcQuickStrategy',
-            content: localize('Quick strategy'),
-            callback: () => {
-                setActiveTab(DBOT_TABS.BOT_BUILDER);
-                setFormVisibility(true);
-                rudderStackSendOpenEvent({
-                    subpage_name: 'bot_builder',
-                    subform_source: 'dashboard',
-                    subform_name: 'quick_strategy',
-                });
-            },
+            id: 'copy-trading',
+            title: localize('Copy Trading'),
+            icon: LabelPairedCopyCaptionRegularIcon,
+            description: localize('Follow and copy the strategy of top traders'),
+            tabIndex: DBOT_TABS.COPY_TRADER,
+            tag: localize('Popular'),
+            tagType: 'popular',
+        },
+        {
+            id: 'smart-auto',
+            title: localize('Smart Auto AI'),
+            icon: LabelPairedLightbulbCaptionRegularIcon,
+            description: localize('Professional 24H Bots and Super Rise/Fall automation'),
+            tabIndex: DBOT_TABS.SMART_AUTO24,
+            tag: localize('Pro'),
+            tagType: 'pro',
+        },
+        {
+            id: 'analysis-tool',
+            title: localize('Analysis Tool'),
+            icon: LabelPairedChartLineCaptionRegularIcon,
+            description: localize('Advanced digit stats for Over/Under and Even/Odd'),
+            tabIndex: DBOT_TABS.ANALYSIS_TOOL,
+            tag: localize('Premium'),
+            tagType: 'hot',
+        },
+        {
+            id: 'easy-tool',
+            title: localize('Easy Tool'),
+            icon: LabelPairedCircleDotCaptionRegularIcon,
+            description: localize('Simple analysis tools for quick trading decisions'),
+            tabIndex: DBOT_TABS.EASY_TOOL,
+            tag: localize('New'),
+            tagType: 'hot',
         },
     ];
 
-    return React.useMemo(
-        () => (
-            <div
-                className={classNames('tab__dashboard__table', {
-                    'tab__dashboard__table--minimized': has_dashboard_strategies && is_mobile,
-                })}
-            >
-                <div
-                    className={classNames('tab__dashboard__table__tiles', {
-                        'tab__dashboard__table__tiles--minimized': has_dashboard_strategies && is_mobile,
-                    })}
-                    id='tab__dashboard__table__tiles'
-                >
-                    {actions.map(icons => {
-                        const { icon, content, callback } = icons;
-                        return (
-                            <div
-                                key={content}
-                                className={classNames('tab__dashboard__table__block', {
-                                    'tab__dashboard__table__block--minimized': has_dashboard_strategies && is_mobile,
-                                })}
-                                onClick={() => {
-                                    callback();
-                                }}
-                                onKeyDown={(e: React.KeyboardEvent) => {
-                                    if (e.key === 'Enter') {
-                                        callback();
-                                    }
-                                }}
-                                tabIndex={0}
-                            >
-                                <Icon
-                                    className={classNames('tab__dashboard__table__images', {
-                                        'tab__dashboard__table__images--minimized': has_dashboard_strategies,
-                                    })}
-                                    width='8rem'
-                                    height='8rem'
-                                    icon={icon}
-                                    id={icon}
-                                />
-                                <Text color='prominent' size={is_mobile ? 'xxs' : 'xs'}>
-                                    {content}
-                                </Text>
-                            </div>
-                        );
-                    })}
-                </div>
-                <DashboardBotList />
+    const filteredItems = quickAccessItems.filter(
+        item =>
+            item.title.toLowerCase().includes(search_query.toLowerCase()) ||
+            item.description.toLowerCase().includes(search_query.toLowerCase())
+    );
+
+    if (filteredItems.length === 0) {
+        return (
+            <div className='no-results'>
+                <Text color='less-prominent'>{localize('No specialized tools found matching your search.')}</Text>
             </div>
-        ),
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        [is_dialog_open, has_dashboard_strategies]
+        );
+    }
+
+    return (
+        <div className='quick-access-grid'>
+            {filteredItems.map(item => (
+                <div
+                    key={item.id}
+                    className={classNames('quick-access-card', `card--${item.id}`)}
+                    onClick={() => {
+                        if (item.id === 'load-bot') {
+                            load_modal.toggleLoadModal();
+                        } else {
+                            handleTabChange(item.tabIndex);
+                        }
+                    }}
+                >
+                    <div className='card-glow' />
+                    {item.tag && <div className={classNames('card-tag', `tag--${item.tagType}`)}>{item.tag}</div>}
+                    <div className='card-icon-wrapper'>
+                        <item.icon className='card-icon' />
+                    </div>
+                    <div className='card-content'>
+                        <Text as='h3' color='prominent' weight='bold'>
+                            {item.title}
+                        </Text>
+                        <Text as='p' color='less-prominent' size='xs'>
+                            {item.description}
+                        </Text>
+                    </div>
+                    <div className='card-arrow'>
+                        <span>→</span>
+                    </div>
+                </div>
+            ))}
+        </div>
     );
 });
 

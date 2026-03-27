@@ -1,9 +1,8 @@
-import React from 'react';
-import { StaticUrl } from '@deriv/components';
-import { Localize, localize } from '@deriv/translations';
+import StaticUrl from '@/components/shared_ui/static-url';
+import { Localize, localize } from '@deriv-com/translations';
 
 export default {
-    text: [
+    text: () => [
         localize('Use this block when you want to use multipliers as your trade type.'),
         localize('Click the multiplier drop-down menu and choose the multiplier value you want to trade with.'),
         localize('Your potential profit will be multiplied by the multiplier value you’ve chosen.'),

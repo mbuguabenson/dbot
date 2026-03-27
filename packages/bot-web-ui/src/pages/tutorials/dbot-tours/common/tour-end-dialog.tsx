@@ -1,14 +1,14 @@
-import React from 'react';
-import { Dialog, Text } from '@deriv/components';
-import { observer, useStore } from '@deriv/stores';
-import { Localize, localize } from '@deriv/translations';
-import { useDBotStore } from '../../../../stores/useDBotStore';
+import { observer } from 'mobx-react-lite';
+import Dialog from '@/components/shared_ui/dialog';
+import Text from '@/components/shared_ui/text';
+import { useStore } from '@/hooks/useStore';
+import { Localize, localize } from '@deriv-com/translations';
+import { useDevice } from '@deriv-com/ui';
 
 const TourEndDialog = observer(() => {
-    const { ui } = useStore();
-    const { dashboard } = useDBotStore();
+    const { dashboard } = useStore();
     const { is_tour_dialog_visible, setTourDialogVisibility } = dashboard;
-    const { is_desktop } = ui;
+    const { isDesktop } = useDevice();
 
     const getTourContent = () => {
         return (
@@ -54,12 +54,12 @@ const TourEndDialog = observer(() => {
                 has_close_icon={false}
             >
                 <div className='dc-dialog__content__header'>
-                    <Text weight='bold' color='prominent' size={is_desktop ? 's' : 'xs'}>
-                        {localize('Congratulations')}
+                    <Text weight='bold' color='prominent' size={isDesktop ? 's' : 'xs'}>
+                        <Localize i18n_default_text='Congratulations' />
                     </Text>
                 </div>
                 <div className='dc-dialog__content__description'>
-                    <Text size={is_desktop ? 'xs' : 'xxs'} color='prominent'>
+                    <Text size={isDesktop ? 'xs' : 'xxs'} color='prominent'>
                         {getTourContent()}
                     </Text>
                 </div>

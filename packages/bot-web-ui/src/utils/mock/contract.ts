@@ -1,4 +1,4 @@
-import { TContractInfo } from 'Components/summary/summary-card.types';
+import { TContractInfo } from '@/components/summary/summary-card.types';
 
 export const mock_contract: TContractInfo = {
     transaction_ids: { buy: 123, sell: 6789 },

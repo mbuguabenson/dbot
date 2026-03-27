@@ -1,12 +1,12 @@
 import React from 'react';
-import { getUUID } from '@deriv/bot-skeleton/src/services/tradeEngine/utils/helpers';
-import { Text } from '@deriv/components';
-import { observer } from '@deriv/stores';
+import { observer } from 'mobx-react-lite';
+import Text from '@/components/shared_ui/text';
+import { getUUID } from '@/external/bot-skeleton/services/tradeEngine/utils/helpers';
 
 type TTourSteps = {
-    content: string[] | React.ReactElement[];
+    content: React.ReactElement[];
     media?: string;
-    label: string | boolean;
+    label: React.ReactElement;
     step_index: number;
     show_actions?: boolean;
     has_localize_component?: boolean;
@@ -19,14 +19,14 @@ const TourSteps = observer(
                 <div className='onboard'>
                     {show_actions && (
                         <div className='onboard__header'>
-                            <Text color='less-prominent' line_height='l'>
+                            <Text color='less-prominent' lineHeight='l'>
                                 {step_index}/6
                             </Text>
                         </div>
                     )}
                     <div className='onboard__steps'>
                         <div className='onboard__label'>
-                            <Text as='p' line_height='l' weight='bold'>
+                            <Text as='p' lineHeight='l' weight='bold'>
                                 {label}
                             </Text>
                         </div>
@@ -47,12 +47,12 @@ const TourSteps = observer(
 
                         <div className='onboard__content'>
                             <>
-                                {content.map((content_data, index) => {
+                                {content.map(content_data => {
                                     return has_localize_component ? (
                                         content_data
                                     ) : (
                                         <div className='onboard__content__block' key={`onboard--${getUUID()}`}>
-                                            <Text align='left' as='p' size='xs' line_height='l'>
+                                            <Text align='left' as='p' size='xs' lineHeight='l'>
                                                 {content_data}
                                             </Text>
                                         </div>

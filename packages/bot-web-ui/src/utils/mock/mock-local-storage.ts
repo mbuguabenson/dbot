@@ -1,5 +1,5 @@
 // to use this localStorage mock, add the following import statement to the test file:
-// import 'Utils/mock/mock-local-storage';
+// import '@/utils/mock/mock-local-storage';
 
 let store: Record<string, string> = {};
 

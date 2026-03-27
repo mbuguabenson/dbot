@@ -1,8 +1,10 @@
-import { platform_name } from '@deriv/shared';
 import { TNotificationMessage } from '@deriv/stores/types';
-import { localize } from '@deriv/translations';
+import { localize } from '@deriv-com/translations';
+import { BrandConstants } from '@deriv-com/utils';
 
-export const switch_account_notification = {
+const { platforms } = BrandConstants;
+
+export const switch_account_notification = () => ({
     key: 'bot_switch_account',
     header: localize('You have switched accounts.'),
     message: localize(
@@ -10,7 +12,7 @@ export const switch_account_notification = {
     ),
     type: 'warning',
     is_persistent: true,
-};
+});
 
 export const journalError = (onClick: () => void): TNotificationMessage => {
     return {
@@ -21,7 +23,7 @@ export const journalError = (onClick: () => void): TNotificationMessage => {
             onClick,
         },
         type: 'danger',
-        platform: platform_name.DBot,
+        platform: platforms.dBot,
         is_disposable: true,
     };
 };

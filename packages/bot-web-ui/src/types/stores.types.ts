@@ -27,4 +27,5 @@ export type TDbotStore = {
 export type TApiHelpersStore = {
     server_time: TStores['common']['server_time'];
     ws: TWebSocket;
+    ticks_service: any;
 };

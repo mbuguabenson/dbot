@@ -1,12 +1,13 @@
 import React from 'react';
 import classNames from 'classnames';
-import { useHistory } from 'react-router-dom';
-import { Text } from '@deriv/components';
+import { observer } from 'mobx-react-lite';
+import { useNavigate } from 'react-router-dom';
+import { isFirefox, isSafari } from '@/components/shared/utils/browser/browser_detect';
+import Text from '@/components/shared_ui/text';
+import { useStore } from '@/hooks/useStore';
 import { StandaloneBullhornRegularIcon } from '@deriv/quill-icons';
-import { observer } from '@deriv/stores';
-import { localize } from '@deriv/translations';
+import { localize } from '@deriv-com/translations';
 import { Notifications as Announcement } from '@deriv-com/ui';
-import { useDBotStore } from 'Stores/useDBotStore';
 import { rudderStackSendOpenEvent } from '../../../analytics/rudderstack-common-events';
 import {
     rudderStackSendAnnouncementActionEvent,
@@ -30,14 +31,15 @@ const Announcements = observer(({ is_mobile, is_tablet, handleTabChange }: TAnno
         load_modal: { toggleLoadModal },
         dashboard: { showVideoDialog },
         quick_strategy: { setFormVisibility },
-    } = useDBotStore();
+    } = useStore();
     const [is_announce_dialog_open, setIsAnnounceDialogOpen] = React.useState(false);
     const [is_open_announce_list, setIsOpenAnnounceList] = React.useState(false);
     const [selected_announcement, setSelectedAnnouncement] = React.useState<TAnnouncement | null>(null);
     const [read_announcements_map, setReadAnnouncementsMap] = React.useState({} as Record<string, boolean>);
     const [amount_active_announce, setAmountActiveAnnounce] = React.useState(0);
-    const history = useHistory();
+    const navigate = useNavigate();
     const [notifications, setNotifications] = React.useState([] as TNotifications[]);
+
     const action_button_class_name = 'announcements__label';
 
     const storeDataInLocalStorage = (updated_local_storage_data: Record<string, boolean>) => {
@@ -56,13 +58,13 @@ const Announcements = observer(({ is_mobile, is_tablet, handleTabChange }: TAnno
         setSelectedAnnouncement(announcement);
         setIsAnnounceDialogOpen(true);
         setIsOpenAnnounceList(prev => !prev);
-        rudderStackSendAnnouncementClickEvent({ announcement_name: announcement.announcement.event_name });
+        rudderStackSendAnnouncementClickEvent({ announcement_name: announcement.announcement.main_title });
         updateLocalStorage(announce_id);
     };
 
     const handleRedirect = (url: string) => () => {
-        if (history) {
-            history.push(url);
+        if (navigate) {
+            navigate(url);
         }
     };
 
@@ -71,21 +73,46 @@ const Announcements = observer(({ is_mobile, is_tablet, handleTabChange }: TAnno
         data = JSON.parse(localStorage.getItem('bot-announcements') ?? '{}');
         const tmp_notifications: TNotifications[] = [];
         const temp_localstorage_data: Record<string, boolean> | null = {};
+        const loggedInAccountId = localStorage.getItem('active_loginid');
+        const allUserAccountsString = localStorage.getItem('client_account_details');
+        let accountDate = null;
+        if (allUserAccountsString) {
+            const allUserAccounts = JSON.parse(allUserAccountsString) as any[];
+            const currentAccount = allUserAccounts?.find(account => account.loginid == loggedInAccountId);
+            if (currentAccount && currentAccount.created_at) {
+                accountDate = new Date(currentAccount.created_at * 1000);
+            }
+        }
+
         BOT_ANNOUNCEMENTS_LIST.map(item => {
-            let is_not_read = true;
-            if (data && Object.hasOwn(data, item.id)) {
-                is_not_read = data[item.id];
+            // Skip PWA announcement entirely if not Chrome browser
+            if (item.id === 'PWA_INSTALL_ANNOUNCE') {
+                const isChrome = /Chrome/.test(navigator.userAgent) && !isFirefox() && !isSafari();
+                if (!isChrome) {
+                    return;
+                }
             }
 
-            tmp_notifications.push({
-                key: item.id,
-                icon: <item.icon announce={is_not_read} />,
-                title: <TitleAnnounce title={item.title} announce={is_not_read} />,
-                message: <MessageAnnounce message={item.message} date={item.date} announce={is_not_read} />,
-                buttonAction: performButtonAction(item, modalButtonAction, handleRedirect),
-                actionText: item.actionText,
-            });
-            temp_localstorage_data[item.id] = is_not_read;
+            let is_not_read = true;
+            if (data && Object.prototype.hasOwnProperty.call(data, item.id)) {
+                is_not_read = data[item.id];
+            }
+            const notificationDate = new Date(item.date);
+            // Always show PWA announcement regardless of account creation date
+            const shouldShow = item.id === 'PWA_INSTALL_ANNOUNCE' || (accountDate && notificationDate > accountDate);
+
+            if (shouldShow) {
+                tmp_notifications.push({
+                    id: item.id,
+                    key: item.id,
+                    icon: <item.icon announce={is_not_read} />,
+                    title: <TitleAnnounce title={item.title} announce={is_not_read} />,
+                    message: <MessageAnnounce message={item.message} date={item.date} announce={is_not_read} />,
+                    buttonAction: performButtonAction(item, modalButtonAction, handleRedirect),
+                    actionText: item.actionText,
+                } as any);
+                temp_localstorage_data[item.id] = is_not_read;
+            }
         });
         setNotifications(tmp_notifications);
         return temp_localstorage_data;
@@ -98,6 +125,22 @@ const Announcements = observer(({ is_mobile, is_tablet, handleTabChange }: TAnno
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // Listen for close announcements panel event
+    React.useEffect(() => {
+        const handleCloseAnnouncementsPanel = () => {
+            setIsOpenAnnounceList(false);
+            // Refresh notifications after closing to update read status
+            const temp_notifications = updateNotifications();
+            setReadAnnouncementsMap(temp_notifications);
+        };
+
+        window.addEventListener('closeAnnouncementsPanel', handleCloseAnnouncementsPanel);
+        return () => {
+            window.removeEventListener('closeAnnouncementsPanel', handleCloseAnnouncementsPanel);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     React.useEffect(() => {
         const number_ammount_active_announce = Object.values(read_announcements_map).filter(value => value).length;
         setAmountActiveAnnounce(number_ammount_active_announce);
@@ -105,7 +148,7 @@ const Announcements = observer(({ is_mobile, is_tablet, handleTabChange }: TAnno
     }, [read_announcements_map]);
 
     const openAccumulatorsVideo = () => {
-        const accumulators_video = guide_content.find(guide_content => guide_content.id === 4);
+        const accumulators_video = guide_content().find(guide_content => guide_content.id === 4);
         if (accumulators_video) {
             showVideoDialog({ url: accumulators_video.url, type: 'url' });
         }
@@ -113,8 +156,8 @@ const Announcements = observer(({ is_mobile, is_tablet, handleTabChange }: TAnno
 
     const handleOnCancel = () => {
         rudderStackSendAnnouncementActionEvent({
-            announcement_name: selected_announcement?.announcement.event_name,
-            announcement_action: selected_announcement?.announcement?.event_action?.cancel_button_text,
+            announcement_name: selected_announcement?.announcement.main_title,
+            announcement_action: selected_announcement?.announcement.cancel_button_text,
         });
         if (selected_announcement?.switch_tab_on_cancel) {
             handleTabChange(selected_announcement.switch_tab_on_cancel);
@@ -128,8 +171,8 @@ const Announcements = observer(({ is_mobile, is_tablet, handleTabChange }: TAnno
 
     const handleOnConfirm = () => {
         rudderStackSendAnnouncementActionEvent({
-            announcement_name: selected_announcement?.announcement.event_name,
-            announcement_action: selected_announcement?.announcement?.event_action?.confirm_button_text,
+            announcement_name: selected_announcement?.announcement.main_title,
+            announcement_action: selected_announcement?.announcement.confirm_button_text,
         });
         if (selected_announcement?.switch_tab_on_confirm) {
             handleTabChange(selected_announcement.switch_tab_on_confirm);
@@ -170,7 +213,7 @@ const Announcements = observer(({ is_mobile, is_tablet, handleTabChange }: TAnno
             >
                 <StandaloneBullhornRegularIcon fill='var(--icon-black-plus)' iconSize='sm' />
                 {!is_mobile && (
-                    <Text size='xs' line_height='s' className={action_button_class_name}>
+                    <Text size='xs' lineHeight='s' className={action_button_class_name}>
                         {localize('Announcements')}
                     </Text>
                 )}

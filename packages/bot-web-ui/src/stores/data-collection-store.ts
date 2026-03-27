@@ -1,9 +1,9 @@
 import crc32 from 'crc-32/crc32';
 import { action, makeObservable, observable, reaction } from 'mobx';
-import { DBot, convertStrategyToIsDbot } from '@deriv/bot-skeleton';
-import { cloneObject, isProduction } from '@deriv/shared';
-import RootStore from './root-store';
+import { cloneObject, isProduction } from '@/components/shared';
+import { convertStrategyToIsDbot, DBot } from '@/external/bot-skeleton';
 import { TStores } from '@deriv/stores/types';
+import RootStore from './root-store';
 
 export default class DataCollectionStore {
     root_store: RootStore;

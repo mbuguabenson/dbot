@@ -1,10 +1,12 @@
 import React from 'react';
 import classNames from 'classnames';
-import { Icon, ProgressBarTracker, Text } from '@deriv/components';
-import { observer } from '@deriv/stores';
-import { localize } from '@deriv/translations';
-import { getSetting } from 'Utils/settings';
-import { useDBotStore } from 'Stores/useDBotStore';
+import { observer } from 'mobx-react-lite';
+import ProgressBarTracker from '@/components/shared_ui/progress-bar-tracker';
+import Text from '@/components/shared_ui/text';
+import { useStore } from '@/hooks/useStore';
+import { getSetting } from '@/utils/settings';
+import { LegacyClose1pxIcon } from '@deriv/quill-icons/Legacy';
+import { localize } from '@deriv-com/translations';
 import TourButton from '../common/tour-button';
 import { DBOT_ONBOARDING_MOBILE, TMobileTourConfig } from '../tour-content';
 
@@ -21,7 +23,7 @@ type TTourData = TMobileTourConfig & {
 };
 
 const OnboardingTourMobile = observer(() => {
-    const { dashboard } = useDBotStore();
+    const { dashboard } = useStore();
     const { onCloseTour, onTourEnd, setTourActiveStep, active_tour, active_tab, setActiveTour } = dashboard;
     const [tour_step, setStep] = React.useState<number>(1);
     const [tour_data, setTourData] = React.useState<TTourData>(default_tour_data);
@@ -33,16 +35,6 @@ const OnboardingTourMobile = observer(() => {
     const is_tour_active = active_tour === 'onboarding';
 
     React.useEffect(() => {
-        const checkTokenForTour = () => {
-            const token = getSetting('onboard_tour_token');
-            if (!token && active_tab === 0) {
-                setActiveTour('onboarding');
-            }
-        };
-        checkTokenForTour();
-    }, [active_tab, active_tour]);
-
-    React.useEffect(() => {
         DBOT_ONBOARDING_MOBILE.forEach(data => {
             if (data.tour_step_key === tour_step) {
                 setTourData(data);
@@ -51,6 +43,16 @@ const OnboardingTourMobile = observer(() => {
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [tour_step]);
+
+    React.useEffect(() => {
+        const checkTokenForTour = () => {
+            const token = getSetting('onboard_tour_token');
+            if (!token && active_tab === 0) {
+                setActiveTour('onboarding');
+            }
+        };
+        checkTokenForTour();
+    }, [active_tab, active_tour]);
 
     if (!active_tour) {
         return null;
@@ -69,14 +71,15 @@ const OnboardingTourMobile = observer(() => {
                     <Text
                         color='less-prominent'
                         weight='less-prominent'
-                        line_height='s'
+                        lineHeight='s'
                         size='xxs'
                         data-testid='dbot-onboard-slider__navbar'
                     >{`${tour_step_key - 1}/7`}</Text>
                     <span onClick={onCloseTour}>
-                        <Icon
-                            icon='IcCross'
-                            data_testid='exit-onboard-tour'
+                        <LegacyClose1pxIcon
+                            height='20px'
+                            width='20px'
+                            data-testid='exit-onboard-tour'
                             className='db-contract-card__result-icon'
                             color='secondary'
                         />
@@ -90,7 +93,7 @@ const OnboardingTourMobile = observer(() => {
                     align='center'
                     className='dbot-slider__title'
                     as='span'
-                    line_height='s'
+                    lineHeight='s'
                     size='xs'
                 >
                     {localize(header)}
@@ -126,7 +129,7 @@ const OnboardingTourMobile = observer(() => {
                                 color='prominent'
                                 className='dbot-slider__content'
                                 as='div'
-                                line_height='s'
+                                lineHeight='s'
                                 size='xxs'
                             >
                                 {data}

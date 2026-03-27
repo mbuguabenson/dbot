@@ -1,7 +1,8 @@
 import { action, makeObservable, observable, reaction } from 'mobx';
-import { scrollWorkspace } from '@deriv/bot-skeleton';
+import { scrollWorkspace } from '@/external/bot-skeleton';
+import GTM from '@/utils/gtm';
 import { TStores } from '@deriv/stores/types';
-import { localize } from '@deriv/translations';
+import { localize } from '@deriv-com/translations';
 import RootStore from './root-store';
 
 export default class ToolboxStore {
@@ -61,8 +62,7 @@ export default class ToolboxStore {
                 if (is_toolbox_open) {
                     //this.adjustWorkspace();
                     // Emit event to GTM
-                    const { gtm } = this.core;
-                    gtm.pushDataLayer({ event: 'dbot_toolbox_visible', value: true });
+                    GTM?.pushDataLayer?.({ event: 'dbot_toolbox_visible', value: true });
                 }
             }
         );
@@ -102,11 +102,11 @@ export default class ToolboxStore {
     // eslint-disable-next-line class-methods-use-this
     adjustWorkspace() {
         // NOTE: added this load modal open check to prevent scroll when load modal is open
-        const is_load_modal_open = this.root_store.load_modal.is_load_modal_open;
-        const workspace = is_load_modal_open ? window.Blockly.getMainWorkspace() : window.Blockly.derivWorkspace;
-        if (!this.is_workspace_scroll_adjusted && !is_load_modal_open) {
+        if (!this.is_workspace_scroll_adjusted && !this.root_store.load_modal.is_load_modal_open) {
             this.is_workspace_scroll_adjusted = true;
+
             setTimeout(() => {
+                const workspace = window.Blockly.derivWorkspace;
                 const toolbox_width = document.getElementById('gtm-toolbox')?.getBoundingClientRect().width || 0;
                 const block_canvas_rect = workspace.svgBlockCanvas_?.getBoundingClientRect(); // eslint-disable-line
 
@@ -130,14 +130,6 @@ export default class ToolboxStore {
 
                 this.is_workspace_scroll_adjusted = false;
             }, 300);
-        } else if (is_load_modal_open) {
-            if (workspace?.RTL) {
-                const scroll_y = 380;
-                const workspace_metrics = workspace.getMetrics();
-                const block_canvas_space =
-                    workspace_metrics.scrollWidth + workspace_metrics.viewLeft - workspace_metrics.viewWidth;
-                workspace?.scrollbar?.set(block_canvas_space, scroll_y);
-            }
         }
     }
 
@@ -180,7 +172,7 @@ export default class ToolboxStore {
             //we needed to add this check since we are not using
             //blocky way of defining vaiables
             if (dynamic === 'VARIABLE') {
-                fnToApply = Blockly.DataCategory;
+                fnToApply = window.Blockly.DataCategory;
             }
             xml_list = fnToApply(workspace);
         }
@@ -284,7 +276,6 @@ export default class ToolboxStore {
             })
             .flat();
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const pushIfNotExists = (array: any[] = [], element_to_push = {}) => {
             if (!array.some(element => element === element_to_push)) {
                 array.push(element_to_push);
@@ -388,7 +379,7 @@ export default class ToolboxStore {
 
         // block_variable_name matched
         const matched_variables = all_variables.filter(variable => variable.name.toUpperCase().includes(search_term));
-        const variables_blocks = Blockly.DataCategory.search(matched_variables);
+        const variables_blocks = window.Blockly.DataCategory.search(matched_variables);
         // eslint-disable-next-line consistent-return
         const unique_var_blocks = variables_blocks.filter(variable_block => {
             return flyout_content.indexOf(variable_block) === -1;
@@ -417,7 +408,7 @@ export default class ToolboxStore {
             }
         });
 
-        const procedures_blocks = Blockly.Procedures.populateDynamicProcedures(searched_procedures);
+        const procedures_blocks = window.Blockly.Procedures.populateDynamicProcedures(searched_procedures);
         // eslint-disable-next-line consistent-return
         const unique_proce_blocks = procedures_blocks.filter(procedure_block => {
             return flyout_content.indexOf(procedure_block) === -1;

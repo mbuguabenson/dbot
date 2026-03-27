@@ -62,6 +62,9 @@ export default defineConfig({
         },
     },
     output: {
+        distPath: {
+            root: '../core/dist/bot',
+        },
         publicPath: '/bot/',
         copy: [
             {

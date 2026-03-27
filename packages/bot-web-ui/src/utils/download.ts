@@ -1,5 +1,5 @@
-import { LogTypes } from '@deriv/bot-skeleton';
-import { localize } from '@deriv/translations';
+import { LogTypes } from '@/external/bot-skeleton';
+import { localize } from '@deriv-com/translations';
 
 export type TTransaction = {
     display_name: string;
@@ -33,7 +33,7 @@ export type TExtra = {
     current_currency?: string;
 };
 
-export const getCurrentDateTimeLocale = () => {
+const getCurrentDateTimeLocale = () => {
     const date = new Date(); // This will be the current date and time
 
     const year = date.getUTCFullYear();
@@ -92,5 +92,9 @@ export const downloadFile = (file_name: string, content: string) => {
     link.setAttribute('download', `${file_name} ${getCurrentDateTimeLocale()}.csv`);
     document.body.appendChild(link);
     link.click();
-    link.parentNode?.removeChild(link);
+    const parent_element = link.parentNode;
+    const child_element = link;
+    if (parent_element && child_element && parent_element?.contains(child_element)) {
+        parent_element?.removeChild(child_element);
+    }
 };

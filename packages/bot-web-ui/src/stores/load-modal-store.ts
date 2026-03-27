@@ -7,12 +7,11 @@ import {
     removeExistingWorkspace,
     save_types,
     saveWorkspaceToRecent,
-} from '@deriv/bot-skeleton';
-import { inject_workspace_options, updateXmlValues } from '@deriv/bot-skeleton/src/scratch/utils';
-import { isDbotRTL } from '@deriv/bot-skeleton/src/utils/workspace';
+} from '@/external/bot-skeleton';
+import { inject_workspace_options, updateXmlValues } from '@/external/bot-skeleton/scratch/utils';
+import { isDbotRTL } from '@/external/bot-skeleton/utils/workspace';
 import { TStores } from '@deriv/stores/types';
-import { localize } from '@deriv/translations';
-import { tabs_title } from 'Constants/load-modal';
+import { localize } from '@deriv-com/translations';
 import { TStrategy } from 'Types';
 import {
     rudderStackSendUploadStrategyCompletedEvent,
@@ -20,6 +19,7 @@ import {
     rudderStackSendUploadStrategyStartEvent,
 } from '../analytics/rudderstack-common-events';
 import { getStrategyType } from '../analytics/utils';
+import { tabs_title } from '../constants/load-modal';
 import { waitForDomElement } from '../utils/dom-observer';
 import RootStore from './root-store';
 
@@ -28,7 +28,7 @@ export default class LoadModalStore {
     core: TStores;
     imported_strategy_type = 'pending';
 
-    constructor(root_store: RootStore, core: TStores) {
+    constructor(root_store: RootStore, core: any) {
         makeObservable(this, {
             active_index: observable,
             is_load_modal_open: observable,
@@ -102,8 +102,8 @@ export default class LoadModalStore {
         );
     }
 
-    recent_workspace: Blockly.WorkspaceSvg | null = null;
-    local_workspace: Blockly.WorkspaceSvg | null = null;
+    recent_workspace: window.Blockly.WorkspaceSvg | null = null;
+    local_workspace: window.Blockly.WorkspaceSvg | null = null;
     drop_zone: unknown;
 
     active_index = 0;
@@ -121,17 +121,15 @@ export default class LoadModalStore {
     current_workspace_id = '';
     upload_id = '';
 
-    get preview_workspace(): Blockly.WorkspaceSvg | null {
+    get preview_workspace(): window.Blockly.WorkspaceSvg | null {
         if (this.tab_name === tabs_title.TAB_LOCAL) return this.local_workspace;
         if (this.tab_name === tabs_title.TAB_RECENT) return this.recent_workspace;
         return null;
     }
 
     get selected_strategy(): TStrategy {
-        return (
-            this.dashboard_strategies.find((ws: { id: string }) => ws.id === this.selected_strategy_id) ??
-            this.dashboard_strategies[0]
-        );
+        const strategies = this.recent_strategies.length > 0 ? this.recent_strategies : this.dashboard_strategies;
+        return strategies.find((ws: { id: string }) => ws.id === this.selected_strategy_id) ?? strategies[0];
     }
 
     get tab_name(): string {
@@ -207,8 +205,10 @@ export default class LoadModalStore {
         const { blockly_store } = this.root_store;
         const { setLoading } = blockly_store;
         setLoading(true);
-        this.loadStrategyOnModalRecentPreview(this.selected_strategy_id);
-        this.updateXmlValuesOnStrategySelection();
+        if (this.selected_strategy_id) {
+            this.loadStrategyOnModalRecentPreview(this.selected_strategy_id);
+            this.updateXmlValuesOnStrategySelection();
+        }
         this.setOpenButtonDisabled(false);
     };
 
@@ -267,19 +267,6 @@ export default class LoadModalStore {
         }
     };
 
-    getRecentFileIcon = (save_type: { [key: string]: string } | string): string => {
-        switch (save_type) {
-            case save_types.UNSAVED:
-                return 'IcReports';
-            case save_types.LOCAL:
-                return 'IcMyComputer';
-            case save_types.GOOGLE_DRIVE:
-                return 'IcGoogleDrive';
-            default:
-                return 'IcReports';
-        }
-    };
-
     getSaveType = (save_type: { [key: string]: string } | string): string => {
         switch (save_type) {
             case save_types.UNSAVED:
@@ -306,7 +293,7 @@ export default class LoadModalStore {
         }
     };
 
-    loadStrategyToBuilder = async (strategy: TStrategy) => {
+    loadStrategyToBuilder = async (strategy: TStrategy, is_show_notification: boolean = true) => {
         if (strategy?.id) {
             await load({
                 block_string: strategy.xml,
@@ -316,6 +303,7 @@ export default class LoadModalStore {
                 from: strategy.save_type,
                 drop_event: {},
                 showIncompatibleStrategyDialog: false,
+                show_snackbar: is_show_notification,
             });
             window.Blockly.derivWorkspace.strategy_to_load = strategy.xml;
         }
@@ -323,7 +311,6 @@ export default class LoadModalStore {
 
     refreshStrategiesTheme = async () => {
         if (this.recent_workspace) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (this.recent_workspace as any).RTL = isDbotRTL();
         }
         await load({
@@ -334,6 +321,7 @@ export default class LoadModalStore {
             strategy_id: this.selected_strategy?.id,
             from: this.selected_strategy?.save_type,
             showIncompatibleStrategyDialog: false,
+            show_snackbar: false,
         });
     };
 
@@ -392,10 +380,12 @@ export default class LoadModalStore {
 
         if (this.tab_name === tabs_title.TAB_LOCAL) {
             if (!this.drop_zone) {
-                this.drop_zone = document.querySelector('load-strategy__local-dropzone-area');
+                this.drop_zone = document.querySelector('.load-strategy__local-dropzone-area');
 
                 if (this.drop_zone) {
-                    this.drop_zone.addEventListener('drop', event => this.handleFileChange(event, false));
+                    (this.drop_zone as HTMLElement).addEventListener('drop', event =>
+                        this.handleFileChange(event, false)
+                    );
                 }
             }
         }
@@ -411,7 +401,7 @@ export default class LoadModalStore {
 
         // Forget about drop zone when not on Local tab.
         if (this.tab_name !== tabs_title.TAB_LOCAL && this.drop_zone) {
-            this.drop_zone.removeEventListener('drop', event => this.handleFileChange(event, false));
+            (this.drop_zone as HTMLElement).removeEventListener('drop', event => this.handleFileChange(event, false));
         }
         this.setOpenButtonDisabled(false);
     };
@@ -434,7 +424,7 @@ export default class LoadModalStore {
         const [file] = files;
 
         if (!is_body) {
-            if (file.name.includes('xml')) {
+            if (file.name.toLowerCase().endsWith('.xml')) {
                 this.setLoadedLocalFile(file);
                 this.getDashboardStrategies();
             } else {
@@ -455,14 +445,17 @@ export default class LoadModalStore {
                 block_string: e?.target?.result,
                 drop_event,
                 from: save_types.LOCAL,
-                workspace: null as Blockly.WorkspaceSvg | null,
+                workspace: null as window.Blockly.WorkspaceSvg | null,
                 file_name,
                 strategy_id: '',
                 showIncompatibleStrategyDialog: false,
             };
-            await load(load_options);
+            if (this.local_workspace) {
+                this.local_workspace.dispose();
+                this.local_workspace = null;
+            }
             this.loadStrategyOnModalLocalPreview(load_options);
-            this.is_open_button_loading = false;
+            this.setOpenButtonDisabled(false);
         });
 
         reader.readAsText(file);
@@ -500,13 +493,21 @@ export default class LoadModalStore {
     };
 
     updateXmlValuesOnStrategySelection = () => {
-        if (this.recent_strategies.length === 0) return;
-        updateXmlValues({
-            strategy_id: this.selected_strategy_id,
-            convertedDom: window?.Blockly?.utils?.xml?.textToDom(this.selected_strategy?.xml),
-            file_name: this.selected_strategy?.name,
-            from: this.selected_strategy?.save_type || save_types.UNSAVED,
-        });
+        if (this.recent_strategies.length === 0 || !this.selected_strategy) return;
+        const xml = this.selected_strategy?.xml;
+        if (!xml) return;
+
+        try {
+            updateXmlValues({
+                strategy_id: this.selected_strategy_id,
+                convertedDom: window?.Blockly?.utils?.xml?.textToDom(xml),
+                file_name: this.selected_strategy?.name || '',
+                from: this.selected_strategy?.save_type || save_types.UNSAVED,
+            });
+        } catch (e) {
+            // eslint-disable-next-line no-console
+            console.error('Error parsing strategy XML', e);
+        }
     };
 
     loadStrategyOnModalRecentPreview = async workspace_id => {
@@ -522,17 +523,25 @@ export default class LoadModalStore {
         this.setSelectedStrategyId(workspace_id);
 
         await waitForDomElement('#load-strategy__blockly-container');
-        const ref_preview = document?.getElementById('load-strategy__blockly-container');
+        const ref_preview = document.getElementById('load-strategy__blockly-container');
 
-        if (!this.recent_workspace) this.recent_workspace = window.Blockly.inject(ref_preview, inject_options);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (this.recent_workspace as any).RTL = isDbotRTL();
+        if (ref_preview) {
+            if (!this.recent_workspace) this.recent_workspace = window.Blockly.inject(ref_preview, inject_options);
+            (this.recent_workspace as any).RTL = isDbotRTL();
 
-        const convertedDom = window.Blockly?.utils?.xml?.textToDom(this.selected_strategy?.xml);
-        const mainWorkspace = window.Blockly?.getMainWorkspace();
-
-        window.Blockly?.Xml?.clearWorkspaceAndLoadFromXml(convertedDom, mainWorkspace);
-
+            const xml = this.selected_strategy?.xml;
+            if (xml) {
+                try {
+                    const convertedDom = window.Blockly?.utils?.xml?.textToDom(xml);
+                    if (convertedDom) {
+                        window.Blockly?.Xml?.clearWorkspaceAndLoadFromXml(convertedDom, this.recent_workspace);
+                    }
+                } catch (e) {
+                    // eslint-disable-next-line no-console
+                    console.error('Error loading strategy preview', e);
+                }
+            }
+        }
         setLoading(false);
         this.setOpenButtonDisabled(false);
     };
@@ -540,18 +549,19 @@ export default class LoadModalStore {
     loadStrategyOnModalLocalPreview = async load_options => {
         this.setOpenButtonDisabled(true);
         const injectWorkspace = { ...inject_workspace_options, theme: window?.Blockly?.Themes?.zelos_renderer };
-        const ref = document?.getElementById('load-strategy__blockly-container');
 
-        this.local_workspace = window.Blockly.inject(ref, injectWorkspace);
+        await waitForDomElement('#load-strategy__blockly-container');
+        const ref_preview = document.getElementById('load-strategy__blockly-container');
+        if (!this.local_workspace) this.local_workspace = await window.Blockly.inject(ref_preview, injectWorkspace);
+
         load_options.workspace = this.local_workspace;
 
         if (load_options.workspace) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (load_options.workspace as any).RTL = isDbotRTL();
         }
 
         const upload_type = getStrategyType(load_options?.block_string ?? '');
-        const result = await load(load_options);
+        const result = await load({ ...load_options, show_snackbar: false });
         if (!result?.error) {
             rudderStackSendUploadStrategyStartEvent({ upload_provider: 'my_computer', upload_id: this.upload_id });
         } else if (result?.error) {

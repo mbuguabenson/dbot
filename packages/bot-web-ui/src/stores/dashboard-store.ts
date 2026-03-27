@@ -1,8 +1,8 @@
 import DOMPurify from 'dompurify';
 import { action, makeObservable, observable, reaction } from 'mobx';
-import { TStores } from '@deriv/stores/types';
-import { botNotification } from 'Components/bot-notification/bot-notification';
-import { notification_message, NOTIFICATION_TYPE } from 'Components/bot-notification/bot-notification-utils';
+import { botNotification } from '@/components/bot-notification/bot-notification';
+import { notification_message, NOTIFICATION_TYPE } from '@/components/bot-notification/bot-notification-utils';
+type TStores = any; // Fallback since @deriv/stores/types is not found
 import * as strategy_description from '../constants/quick-strategies';
 import { TDescriptionItem } from '../pages/bot-builder/quick-strategy/types';
 import {
@@ -61,6 +61,8 @@ export interface IDashboardStore {
     is_chart_modal_visible: boolean;
     is_trading_view_modal_visible: boolean;
     setPreviewOnPopup: (is_preview_on_popup: boolean) => void;
+    is_profithub_tool_visible: boolean;
+    setIsProfithubToolVisible: (is_profithub_tool_visible: boolean) => void;
 }
 
 export default class DashboardStore implements IDashboardStore {
@@ -68,6 +70,7 @@ export default class DashboardStore implements IDashboardStore {
     core: TStores;
     tutorials_combined_content: (TFaqContent | TGuideContent | TUserGuideContent | TQuickStrategyContent)[] = [];
     combined_search: string[] = [];
+    bot_builder_symbol: string | null = null;
 
     constructor(root_store: RootStore, core: TStores) {
         makeObservable(this, {
@@ -117,22 +120,24 @@ export default class DashboardStore implements IDashboardStore {
             video_tab_content: observable,
             setStrategySaveType: action.bound,
             setShowMobileTourDialog: action.bound,
-            is_chart_modal_visible: observable,
+            setIsProfithubToolVisible: action.bound,
             is_trading_view_modal_visible: observable,
+            is_profithub_tool_visible: observable,
+            bot_builder_symbol: observable,
         });
         this.root_store = root_store;
         this.core = core;
 
-        const getUserGuideContent = [...user_guide_content].map(
-            item => `${item.search_id}# ${item.content.toLowerCase()}`
+        const getUserGuideContent = [...user_guide_content()].map(
+            item => `${item.search_id}# ${item.content?.toLowerCase()}`
         );
 
-        const getVideoContent = [...guide_content].map(item => `${item.search_id}# ${item.content.toLowerCase()}`);
+        const getVideoContent = [...guide_content()].map(item => `${item.search_id}# ${item.content?.toLowerCase()}`);
 
-        const getFaqContent = faq_content.map(item => {
-            return `${item.search_id}# ${item.title.toLowerCase()} ${item.description
+        const getFaqContent = faq_content().map(item => {
+            return `${item.search_id}# ${item.title?.toLowerCase()} ${item.description
                 .map(inner_item => {
-                    const itemWithoutHTML = DOMPurify.sanitize(inner_item.content, {
+                    const itemWithoutHTML = DOMPurify.sanitize(inner_item.content || '', {
                         ALLOWED_TAGS: [], //kept empty to remove all tags
                     });
                     return itemWithoutHTML?.toLowerCase();
@@ -140,11 +145,10 @@ export default class DashboardStore implements IDashboardStore {
                 .join(' ')}`;
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const getQSDescriptionContent = (strategy: any) => {
             if (!strategy) return [];
             const content: string[] = [];
-            strategy.forEach((item: TDescriptionItem) => {
+            strategy().forEach((item: TDescriptionItem) => {
                 if (item?.type !== 'media') {
                     item.content?.forEach((text: string) => content.push(text));
                 }
@@ -152,11 +156,11 @@ export default class DashboardStore implements IDashboardStore {
             return content;
         };
 
-        const getQuickStrategyContent = quick_strategy_content.map(item => {
-            const qs_card_content = item.content.join(' ').toLowerCase();
-            let qs_description_content = getQSDescriptionContent(strategy_description?.[item.qs_name]);
-            qs_description_content = qs_description_content.join(' ').toLowerCase();
-            return `${item.search_id}# ${item.type.toLowerCase()} ${qs_description_content + qs_card_content}`;
+        const getQuickStrategyContent = quick_strategy_content().map(item => {
+            const qs_card_content = item.content.join(' ')?.toLowerCase();
+            const qs_description_content = getQSDescriptionContent((strategy_description as any)?.[item.qs_name]);
+            const qs_description_text = qs_description_content.join(' ')?.toLowerCase();
+            return `${item.search_id}# ${item.type?.toLowerCase()} ${qs_description_text + qs_card_content}`;
         });
 
         this.combined_search = [
@@ -204,6 +208,7 @@ export default class DashboardStore implements IDashboardStore {
     filtered_tab_list = [];
     is_chart_modal_visible = false;
     is_trading_view_modal_visible = false;
+    is_profithub_tool_visible = false;
     faq_title = '';
 
     setFaqTitle = (faq_title: string) => {
@@ -220,35 +225,35 @@ export default class DashboardStore implements IDashboardStore {
     filterTuotrialTab = (search_param: string) => {
         this.search_param = search_param;
         const foundItems = this.combined_search.filter(item => {
-            return item.includes(search_param.toLowerCase());
+            return item.includes(search_param?.toLowerCase());
         });
 
-        const filtered_user_guide: [] = [];
-        const filter_video_guide: [] = [];
-        const filtered_faq_content: [] = [];
-        const filtered_quick_strategy_content: [] = [];
+        const filtered_user_guide: TUserGuideContent[] = [];
+        const filter_video_guide: TGuideContent[] = [];
+        const filtered_faq_content: TFaqContent[] = [];
+        const filtered_quick_strategy_content: TQuickStrategyContent[] = [];
 
         const filtered_tutorial_content = foundItems.map(item => {
             const identifier = item.split('#')[0];
             const index: string = identifier.split('-')[1];
             if (identifier.includes(USER_GUIDE)) {
-                filtered_user_guide.push(user_guide_content[Number(index)]);
-                return user_guide_content[Number(index)];
+                filtered_user_guide.push(user_guide_content()[Number(index)]);
+                return user_guide_content()[Number(index)];
             } else if (identifier.includes(VIDEOS)) {
-                filter_video_guide.push(guide_content[Number(index)]);
-                return guide_content[Number(index)];
+                filter_video_guide.push(guide_content()[Number(index)]);
+                return guide_content()[Number(index)];
             } else if (identifier.includes('faq')) {
-                filtered_faq_content.push(faq_content[Number(index)]);
-                return faq_content[Number(index)];
+                filtered_faq_content.push(faq_content()[Number(index)]);
+                return faq_content()[Number(index)];
             }
-            filtered_quick_strategy_content.push(quick_strategy_content[Number(index)]);
-            return quick_strategy_content[Number(index)];
+            filtered_quick_strategy_content.push(quick_strategy_content()[Number(index)]);
+            return quick_strategy_content()[Number(index)];
         });
 
-        this.guide_tab_content = filtered_user_guide;
-        this.video_tab_content = filter_video_guide;
-        this.faq_tab_content = filtered_faq_content;
-        this.quick_strategy_tab_content = filtered_quick_strategy_content;
+        this.guide_tab_content = () => filtered_user_guide;
+        this.video_tab_content = () => filter_video_guide;
+        this.faq_tab_content = () => filtered_faq_content;
+        this.quick_strategy_tab_content = () => filtered_quick_strategy_content;
 
         return filtered_tutorial_content;
     };
@@ -264,6 +269,16 @@ export default class DashboardStore implements IDashboardStore {
         return is_dark_mode_on;
     }
 
+    setBotBuilderSymbol = (bot_builder_symbol: string | null) => {
+        this.bot_builder_symbol = bot_builder_symbol;
+
+        // Update chart symbol when bot builder symbol changes
+        const { chart_store } = this.root_store;
+        if (chart_store && bot_builder_symbol) {
+            chart_store.onSymbolChange(bot_builder_symbol);
+        }
+    };
+
     setShowMobileTourDialog = (show_mobile_tour_dialog: boolean) => {
         this.show_mobile_tour_dialog = show_mobile_tour_dialog;
     };
@@ -274,7 +289,7 @@ export default class DashboardStore implements IDashboardStore {
 
     setOpenSettings = (toast_message: NOTIFICATION_TYPE) => {
         this.toast_message = toast_message;
-        botNotification(notification_message[toast_message]);
+        botNotification(notification_message()[toast_message]);
     };
 
     setChartModalVisibility = () => {
@@ -311,6 +326,10 @@ export default class DashboardStore implements IDashboardStore {
 
     setPreviewOnPopup = (is_preview_on_popup: boolean): void => {
         this.is_preview_on_popup = is_preview_on_popup;
+    };
+
+    setIsProfithubToolVisible = (is_profithub_tool_visible: boolean): void => {
+        this.is_profithub_tool_visible = is_profithub_tool_visible;
     };
 
     setTourDialogVisibility = (is_tour_dialog_visible: boolean): void => {
@@ -370,7 +389,7 @@ export default class DashboardStore implements IDashboardStore {
     };
 
     onZoomInOutClick = (is_zoom_in: boolean): void => {
-        const workspace = Blockly.getMainWorkspace();
+        const workspace = window.Blockly.getMainWorkspace();
         const metrics = workspace.getMetrics();
         const addition = is_zoom_in ? 1 : -1;
 

@@ -1,8 +1,8 @@
 import { getImageLocation } from '../../public-path';
-import { localize } from '@deriv/translations';
+import { localize } from '@deriv-com/translations';
 import { TDescriptionItem } from '../../pages/bot-builder/quick-strategy/types';
 
-export const D_ALEMBERT: TDescriptionItem[] = [
+export const D_ALEMBERT = (): TDescriptionItem[] => [
     {
         type: 'subtitle',
         content: [localize('Exploring the D’Alembert strategy in Deriv Bot')],
@@ -27,11 +27,7 @@ export const D_ALEMBERT: TDescriptionItem[] = [
     },
     {
         type: 'text',
-        content: [
-            localize(
-                '<strong>Initial stake:</strong> The amount that you are willing to place as a stake to enter a trade. This is the starting point for any changes in stake depending on the dynamic of the strategy being used.'
-            ),
-        ],
+        content: [localize('<strong>Initial stake:</strong> The starting trade amount.')],
     },
     {
         type: 'text',

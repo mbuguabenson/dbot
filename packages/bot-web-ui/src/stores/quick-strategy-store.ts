@@ -1,12 +1,10 @@
 import { action, makeObservable, observable, reaction } from 'mobx';
-import { ApiHelpers, config as qs_config, load } from '@deriv/bot-skeleton';
-import { save_types } from '@deriv/bot-skeleton/src/constants/save-type';
-import { addDynamicBlockToDOM } from 'Utils/xml-dom-quick-strategy';
+import { ApiHelpers, config as qs_config, load } from '@/external/bot-skeleton';
+import { save_types } from '@/external/bot-skeleton/constants/save-type';
+import { addDynamicBlockToDOM } from '@/utils/xml-dom-quick-strategy';
 import { STRATEGIES } from '../pages/bot-builder/quick-strategy/config';
 import { TFormData } from '../pages/bot-builder/quick-strategy/types';
 import RootStore from './root-store';
-import { botNotification } from 'Components/bot-notification/bot-notification';
-import { notification_message, NOTIFICATION_TYPE } from 'Components/bot-notification/bot-notification-utils';
 
 export type TActiveSymbol = {
     group: string;
@@ -37,6 +35,7 @@ interface IQuickStrategyStore {
     };
     is_contract_dialog_open: boolean;
     is_stop_bot_dialog_open: boolean;
+    is_options_loading: boolean;
     setLossThresholdWarningData: (data: TLossThresholdWarningData) => void;
     setFormVisibility: (is_open: boolean) => void;
     setSelectedStrategy: (strategy: string) => void;
@@ -44,6 +43,7 @@ interface IQuickStrategyStore {
     onSubmit: (data: TFormData) => void;
     toggleStopBotDialog: () => void;
     setCurrentDurationMinMax: (min: number, max: number) => void;
+    setOptionsLoading: (is_loading: boolean) => void;
 }
 
 export default class QuickStrategyStore implements IQuickStrategyStore {
@@ -51,13 +51,14 @@ export default class QuickStrategyStore implements IQuickStrategyStore {
     is_open = false;
     selected_strategy = 'MARTINGALE';
     form_data: TFormData = {
-        symbol: qs_config.QUICK_STRATEGY.DEFAULT.symbol,
-        tradetype: qs_config.QUICK_STRATEGY.DEFAULT.tradetype,
-        durationtype: qs_config.QUICK_STRATEGY.DEFAULT.durationtype,
+        symbol: qs_config().QUICK_STRATEGY.DEFAULT.symbol,
+        tradetype: qs_config().QUICK_STRATEGY.DEFAULT.tradetype,
+        durationtype: qs_config().QUICK_STRATEGY.DEFAULT.durationtype,
         action: 'RUN',
     };
     is_contract_dialog_open = false;
     is_stop_bot_dialog_open = false;
+    is_options_loading = false;
     current_duration_min_max = {
         min: 0,
         max: 10,
@@ -75,6 +76,7 @@ export default class QuickStrategyStore implements IQuickStrategyStore {
             is_contract_dialog_open: observable,
             is_open: observable,
             is_stop_bot_dialog_open: observable,
+            is_options_loading: observable,
             initializeLossThresholdWarningData: action,
             selected_strategy: observable,
             loss_threshold_warning_data: observable,
@@ -86,6 +88,7 @@ export default class QuickStrategyStore implements IQuickStrategyStore {
             setLossThresholdWarningData: action,
             setValue: action,
             toggleStopBotDialog: action,
+            setOptionsLoading: action,
         });
         this.root_store = root_store;
         reaction(
@@ -140,13 +143,14 @@ export default class QuickStrategyStore implements IQuickStrategyStore {
     };
 
     onSubmit = async (data: TFormData) => {
-        const { contracts_for } = ApiHelpers.instance;
+        const { contracts_for } = ApiHelpers?.instance ?? {};
+        if (!contracts_for) return;
         const market = await contracts_for.getMarketBySymbol(data.symbol);
         const submarket = await contracts_for.getSubmarketBySymbol(data.symbol);
         const trade_type_cat = await contracts_for.getTradeTypeCategoryByTradeType(data.tradetype);
-        const selected_strategy = STRATEGIES[this.selected_strategy];
+        const selected_strategy = STRATEGIES()[this.selected_strategy];
         const strategy_xml = await import(/* webpackChunkName: `[request]` */ `../xml/${selected_strategy.name}.xml`);
-        const strategy_dom = Blockly.utils.xml.textToDom(strategy_xml.default);
+        const strategy_dom = window.Blockly.utils.xml.textToDom(strategy_xml.default);
         addDynamicBlockToDOM('PREDICTION', 'last_digit_prediction', trade_type_cat, strategy_dom);
 
         const modifyValueInputs = (key: string, value: number) => {
@@ -165,12 +169,10 @@ export default class QuickStrategyStore implements IQuickStrategyStore {
         const modifyFieldDropdownValues = (name: string, value: string) => {
             const name_list = `${name.toUpperCase()}_LIST`;
             const el_blocks = strategy_dom?.querySelectorAll(`field[name="${name_list}"]`);
-            const dropdown_value = value;
             el_blocks?.forEach((el_block: HTMLElement) => {
-                el_block.innerHTML = dropdown_value;
+                el_block.innerHTML = value;
             });
         };
-
         const { unit, action, type, growth_rate, ...rest_data } = data;
         const fields_to_update = {
             market,
@@ -200,7 +202,7 @@ export default class QuickStrategyStore implements IQuickStrategyStore {
             workspace
                 ?.waitForBlockEvent({
                     block_type: 'trade_definition',
-                    event_type: Blockly.Events.BLOCK_CREATE,
+                    event_type: window.Blockly.Events.BLOCK_CREATE,
                     timeout: 5000,
                 })
                 .then(() => {
@@ -209,10 +211,9 @@ export default class QuickStrategyStore implements IQuickStrategyStore {
         }
 
         this.setFormVisibility(false);
-        botNotification(notification_message[NOTIFICATION_TYPE.BOT_IMPORT]);
 
         await load({
-            block_string: Blockly.Xml.domToText(strategy_dom),
+            block_string: window.Blockly.Xml.domToText(strategy_dom),
             file_name: selected_strategy.label,
             workspace,
             from: save_types.UNSAVED,
@@ -226,5 +227,9 @@ export default class QuickStrategyStore implements IQuickStrategyStore {
         this.is_contract_dialog_open = !this.is_contract_dialog_open;
         this.is_stop_bot_dialog_open = !this.is_stop_bot_dialog_open;
         this.setFormVisibility(false);
+    };
+
+    setOptionsLoading = (is_loading: boolean): void => {
+        this.is_options_loading = is_loading;
     };
 }

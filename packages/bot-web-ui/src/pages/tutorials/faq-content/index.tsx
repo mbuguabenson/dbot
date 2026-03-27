@@ -1,10 +1,11 @@
 import React, { KeyboardEvent } from 'react';
 import parse from 'html-react-parser';
-import { Accordion, Text } from '@deriv/components';
-import { useStore } from '@deriv/stores';
-import { Localize } from '@deriv/translations';
-import { DBOT_TABS } from 'Constants/bot-contents';
-import { useDBotStore } from 'Stores/useDBotStore';
+import Accordion from '@/components/shared_ui/accordion';
+import Text from '@/components/shared_ui/text';
+import { DBOT_TABS } from '@/constants/bot-contents';
+import { useStore } from '@/hooks/useStore';
+import { Localize } from '@deriv-com/translations';
+import { useDevice } from '@deriv-com/ui';
 import { TDescription } from '../tutorials.types';
 
 type TFAQContent = {
@@ -13,29 +14,29 @@ type TFAQContent = {
 };
 
 type TFAQList = {
-    title: string;
+    title?: string;
     description: TDescription[];
     search_id?: string;
 };
 
 const FAQ = ({ type, content = '', src, imageclass, is_mobile }: TDescription) => {
     if (type === 'image') return <img src={src} className={imageclass} />;
-    const parsed_content = parse(content);
+
     return (
         <Text
             as='p'
             size={is_mobile ? 'xs' : 's'}
-            line_height={is_mobile ? 'xl' : 'xxl'}
+            lineHeight={is_mobile ? 'xl' : 'xxl'}
             className='faq__description'
             weight='normal'
             key={content}
         >
-            {parsed_content}
+            {parse(content)}
         </Text>
     );
 };
 
-export const scrollToElement = (wrapper_element: HTMLElement, offset: number) => {
+const scrollToElement = (wrapper_element: HTMLElement, offset: number) => {
     if (wrapper_element) {
         wrapper_element.scrollTo({
             top: offset,
@@ -45,17 +46,16 @@ export const scrollToElement = (wrapper_element: HTMLElement, offset: number) =>
 };
 
 const FAQContent = ({ faq_list, handleTabChange }: TFAQContent) => {
-    const { ui } = useStore();
-    const { is_desktop } = ui;
-    const { dashboard } = useDBotStore();
+    const { isDesktop } = useDevice();
+    const { dashboard } = useStore();
     const { faq_title, setFaqTitle } = dashboard;
 
     const handleAccordionOpen = () => {
         faq_list.forEach(data => {
             if (data.search_id === faq_title) {
-                document.querySelectorAll('.faq__title').forEach((data, index) => {
+                document.querySelectorAll('.faq__title').forEach((el, index) => {
                     if (Number(faq_title.split('-')[1]) === index) {
-                        data.click();
+                        (el as HTMLElement).click();
                         setFaqTitle('');
                         handleTabChange(DBOT_TABS.TUTORIAL);
                     }
@@ -66,6 +66,7 @@ const FAQContent = ({ faq_list, handleTabChange }: TFAQContent) => {
 
     React.useEffect(() => {
         handleAccordionOpen();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const faq_wrapper_element = React.useRef<HTMLDivElement>(null);
@@ -82,7 +83,7 @@ const FAQContent = ({ faq_list, handleTabChange }: TFAQContent) => {
                 const offset = previous_sibling_element ? previous_sibling_element.offsetTop - 80 : 0;
                 const desktop_scroll_element = document.querySelector('.dc-tabs__content--tutorials') as HTMLElement;
                 const mobile_scroll_element = document.querySelector('.tutorials-mobile__faq') as HTMLElement;
-                const scroll_element = is_desktop ? desktop_scroll_element : mobile_scroll_element;
+                const scroll_element = isDesktop ? desktop_scroll_element : mobile_scroll_element;
                 scrollToElement(scroll_element, offset);
             }
             if (timer_id?.current) clearTimeout(timer_id.current);
@@ -104,45 +105,46 @@ const FAQContent = ({ faq_list, handleTabChange }: TFAQContent) => {
             header: (
                 <Text
                     as='p'
-                    line_height='xl'
+                    lineHeight='xl'
                     className='faq__title'
                     weight='bold'
                     key={title}
-                    size={is_desktop ? 's' : 'xs'}
+                    size={isDesktop ? 's' : 'xs'}
                 >
-                    {title}
+                    {title || ''}
                 </Text>
             ),
             content: description?.map((item, index) => (
-                <FAQ {...item} is_mobile={!is_desktop} key={`faq-description-item-${item?.content}-${index}`} />
+                <FAQ {...item} is_mobile={!isDesktop} key={`faq-description-item-${item?.content}-${index}`} />
             )),
         }));
     };
 
     return React.useMemo(
         () => (
-            <div className='faq__wrapper' data-testid='dt_faq_wrapper' ref={faq_wrapper_element}>
-                {faq_list?.length > 0 && (
-                    <>
-                        <Text
-                            as='p'
-                            line_height='xl'
-                            className='faq__wrapper__header'
-                            weight='bold'
-                            size={is_desktop ? 's' : 'xs'}
-                        >
-                            <Localize i18n_default_text='FAQ' />
-                        </Text>
-                        <div
-                            data-testid='dt_accordion_test'
-                            onClick={handleAccordionClick}
-                            onKeyDown={handleKeyboardEvent}
-                            tabIndex={0}
-                        >
-                            <Accordion className='faq__wrapper__content' list={getList()} icon_close='' icon_open='' />
-                        </div>
-                    </>
-                )}
+            <div data-testid='id-faq__wrapper'>
+                <div className='faq__wrapper' ref={faq_wrapper_element}>
+                    {faq_list?.length > 0 && (
+                        <>
+                            <Text
+                                as='p'
+                                lineHeight='xl'
+                                className='faq__wrapper__header'
+                                weight='bold'
+                                size={isDesktop ? 's' : 'xs'}
+                            >
+                                <Localize i18n_default_text='FAQ' />
+                            </Text>
+                            <div
+                                data-testid='id-accordion-test'
+                                onClick={handleAccordionClick}
+                                onKeyDown={handleKeyboardEvent}
+                            >
+                                <Accordion className='faq__wrapper__content' list={getList()} />
+                            </div>
+                        </>
+                    )}
+                </div>
             </div>
         ),
         // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -8,7 +8,7 @@ type TBotBuilderTourHandler = {
 };
 
 const BotBuilderTourHandler: React.FC<TBotBuilderTourHandler> = observer(({ is_mobile }) => {
-    return <>{is_mobile ? <BotBuilderTourMobile /> : <BotBuilderTourDesktop />};</>;
+    return <>{is_mobile ? <BotBuilderTourMobile /> : <BotBuilderTourDesktop />}</>;
 });
 
 export default BotBuilderTourHandler;

@@ -1,8 +1,10 @@
-import React, { KeyboardEvent } from 'react';
-import { isDbotRTL } from '@deriv/bot-skeleton/src/utils/workspace';
-import { Icon, Text } from '@deriv/components';
-import { observer, useStore } from '@deriv/stores';
-import { Localize } from '@deriv/translations';
+import { KeyboardEvent } from 'react';
+import { observer } from 'mobx-react-lite';
+import Text from '@/components/shared_ui/text';
+import { isDbotRTL } from '@/external/bot-skeleton/utils/workspace';
+import { LabelPairedChevronLeftMdFillIcon, LabelPairedChevronRightMdFillIcon } from '@deriv/quill-icons/LabelPaired';
+import { Localize } from '@deriv-com/translations';
+import { useDevice } from '@deriv-com/ui';
 import { rudderStackSendSelectQsStrategyGuideEvent } from '../../../analytics/rudderstack-tutorials';
 import { STRATEGIES } from '../../bot-builder/quick-strategy/config';
 import StrategyTabContent from '../../bot-builder/quick-strategy/form-wrappers/strategy-tab-content';
@@ -21,9 +23,8 @@ type TQuickStrategyGuides = {
 
 const QuickStrategyGuidesDetail = observer(
     ({ quick_strategy_tab_content, tutorial_selected_strategy, setTutorialSelectedStrategy }: TQuickStrategyGuides) => {
-        const { ui } = useStore();
-        const { is_desktop } = ui;
-        const text_size = is_desktop ? 's' : 'xs';
+        const { isDesktop } = useDevice();
+        const text_size = isDesktop ? 's' : 'xs';
 
         const scrollToTop = () => {
             const qs_guide = document.querySelector('.tutorials-mobile__qs-guide');
@@ -59,7 +60,7 @@ const QuickStrategyGuidesDetail = observer(
                                             align='center'
                                             weight='bold'
                                             color='prominent'
-                                            line_height='s'
+                                            lineHeight='s'
                                             size={text_size}
                                         >
                                             {type}
@@ -72,7 +73,7 @@ const QuickStrategyGuidesDetail = observer(
                                                     <Text
                                                         align='center'
                                                         color='prominent'
-                                                        line_height='s'
+                                                        lineHeight='s'
                                                         size={text_size}
                                                         className='tutorials-quick-strategy__placeholder__content__text'
                                                     >
@@ -83,10 +84,11 @@ const QuickStrategyGuidesDetail = observer(
                                         </ul>
                                     </div>
                                 </div>
-                                <Icon
-                                    className='tutorials-quick-strategy__placeholder__icon'
-                                    icon={isDbotRTL() ? 'IcChevronLeftBold' : 'IcChevronRightBold'}
-                                />
+                                {isDbotRTL() ? (
+                                    <LabelPairedChevronLeftMdFillIcon className='tutorials-quick-strategy__placeholder__icon' />
+                                ) : (
+                                    <LabelPairedChevronRightMdFillIcon className='tutorials-quick-strategy__placeholder__icon' />
+                                )}
                             </div>
                         ))}
                     </div>
@@ -96,7 +98,7 @@ const QuickStrategyGuidesDetail = observer(
                             <Text
                                 className='tutorials-quick-strategy__breadcrumb__clickable'
                                 color='prominent'
-                                line_height='s'
+                                lineHeight='s'
                                 size={text_size}
                                 as='div'
                                 onClick={() => {
@@ -105,12 +107,14 @@ const QuickStrategyGuidesDetail = observer(
                             >
                                 <Localize i18n_default_text={'Quick strategy guides >'} />
                             </Text>
-                            <Text color='less-prominent' line_height='s' size={text_size} as='div'>
-                                <Localize i18n_default_text={`About ${STRATEGIES[tutorial_selected_strategy].label}`} />
+                            <Text color='less-prominent' lineHeight='s' size={text_size} as='div'>
+                                <Localize
+                                    i18n_default_text={`About ${STRATEGIES()[tutorial_selected_strategy].label}`}
+                                />
                             </Text>
                         </div>
-                        <Text color='prominent' line_height='s' size={text_size} weight='bold' as='div'>
-                            <Localize i18n_default_text={`About ${STRATEGIES[tutorial_selected_strategy].label}`} />
+                        <Text color='prominent' lineHeight='s' size={text_size} weight='bold' as='div'>
+                            <Localize i18n_default_text={`About ${STRATEGIES()[tutorial_selected_strategy].label}`} />
                         </Text>
                         <StrategyTabContent tutorial_selected_strategy={tutorial_selected_strategy} />
                     </>

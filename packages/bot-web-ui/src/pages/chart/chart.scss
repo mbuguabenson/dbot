@@ -1,9 +1,10 @@
-@import '../../styles/mixins.scss';
+@use 'components/shared/styles/mixins' as *;
 
 .bot {
     &__chart-container {
         position: relative;
         top: 0;
+
         &-wrapper {
             position: absolute;
             top: 0;
@@ -23,12 +24,15 @@
                 &.ciq-disabled {
                     display: none;
                 }
+
                 @include mobile-screen {
                     width: auto;
+                    padding: 10px;
 
                     .cq-menu-btn {
                         padding: 0.2rem;
                     }
+
                     .cq-symbol-select-btn {
                         margin: 0.2rem;
 
@@ -36,6 +40,7 @@
                             transform: scale(1);
                             margin-left: auto;
                         }
+
                         .cq-symbol {
                             font-size: 1.4rem;
                         }
@@ -59,7 +64,9 @@
             @include mobile-screen {
                 background: transparent;
                 border-width: 0;
-                bottom: 20.8vh;
+                bottom: calc(12rem + env(safe-area-inset-bottom, 0));
+
+                /* Default bottom position for all browsers */
 
                 .sc-chart-mode,
                 .sc-studies {
@@ -70,6 +77,7 @@
                     border-radius: 50%;
                     margin: 0.8rem;
                     opacity: 0.75;
+
                     @include flex-center;
 
                     &__menu {
@@ -77,12 +85,14 @@
                             top: 0.8rem;
                             left: 0.8rem;
                         }
+
                         & > .ic-icon {
                             top: 0.6rem;
                         }
                     }
                 }
             }
+
             .app-contents .ciq-menu {
                 margin: 0;
             }
@@ -92,24 +102,68 @@
     .smartcharts-mobile {
         .cq-context {
             z-index: 99;
+
             .sc-mcd__category:last-child {
                 margin-bottom: 3rem !important;
             }
         }
 
         & .cq-chart-title .cq-menu-dropdown {
-            position: fixed;
+            position: fixed !important;
             height: 100% !important;
+            width: 100% !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            z-index: 99999 !important;
+            transform: translateZ(0) !important;
+            backface-visibility: hidden !important;
+            will-change: transform !important;
+
             .sc-dialog {
                 height: 100% !important;
+
                 &__body {
                     height: inherit !important;
+
                     .sc-mcd {
                         height: inherit !important;
                         min-width: auto !important;
                     }
+
+                    .title-text {
+                        font-size: 1.6rem;
+                    }
                 }
             }
+        }
+
+        .sc-mcd__item {
+            padding-left: 10px !important;
+        }
+
+        .sc-mcd__category__content .subcategory {
+            padding-left: 10px !important;
+        }
+    }
+}
+
+// Safari-specific fixes
+.dashboard__chart-wrapper--safari {
+    .smartcharts-mobile {
+        .cq-context {
+            .sc-mcd__category:last-child {
+                padding-bottom: 200px !important;
+            }
+        }
+
+        & .cq-chart-title .cq-menu-dropdown {
+            position: absolute !important;
+            height: 100vh !important;
+            width: 100vw !important;
+            left: -10px !important;
+            padding-bottom: 200px;
         }
     }
 }

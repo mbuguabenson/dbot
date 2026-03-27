@@ -1,5 +1,6 @@
-import { getTotalProfit, TContractStore } from '@deriv/shared';
-import { localize } from '@deriv/translations';
+import { getTotalProfit, TContractStore } from '@/components/shared';
+import { TContractOptions } from '@/components/shared';
+import { localize } from '@deriv-com/translations';
 
 export type TContract = {
     name: string;
@@ -44,7 +45,7 @@ type TSupportedContracts = {
     [key in TContractType]: TContract;
 };
 
-export const getSupportedContracts = (is_high_low: boolean): TSupportedContracts => ({
+export const getSupportedContracts = (is_high_low: TContractOptions): TSupportedContracts => ({
     ACCU: {
         name: localize('Accumulators'),
         position: 'top',
@@ -58,11 +59,11 @@ export const getSupportedContracts = (is_high_low: boolean): TSupportedContracts
         position: 'bottom',
     },
     CALL: {
-        name: is_high_low ? localize('Higher') : localize('Rise'),
+        name: is_high_low.isHighLow ? localize('Higher') : localize('Rise'),
         position: 'top',
     },
     PUT: {
-        name: is_high_low ? localize('Lower') : localize('Fall'),
+        name: is_high_low.isHighLow ? localize('Lower') : localize('Fall'),
         position: 'bottom',
     },
     CALLE: {
@@ -190,7 +191,6 @@ export type TValidationRuleIndex =
     | 'has_contract_update_take_profit'
     | 'contract_update_take_profit';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ValidationRuleFunc = (value: number, options: any, contract_store: TContractStore) => boolean;
 
 type ValidationConditionFunc = (contract_store: TContractStore) => boolean;

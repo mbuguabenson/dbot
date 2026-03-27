@@ -1,9 +1,11 @@
 import React from 'react';
 import classNames from 'classnames';
-import { Icon, SelectNative } from '@deriv/components';
-import { TListItem } from '@deriv/components/src/components/dropdown/utility';
-import { observer } from '@deriv/stores';
-import { useDBotStore } from 'Stores/useDBotStore';
+import { observer } from 'mobx-react-lite';
+import { isDesktop } from '@/components/shared';
+import SelectNative, { TListItem } from '@/components/shared_ui/select-native';
+import { useStore } from '@/hooks/useStore';
+import { LabelPairedArrowLeftSmRegularIcon, LabelPairedSearchSmRegularIcon } from '@deriv/quill-icons/LabelPaired';
+import { LegacyCloseCircle1pxBlackIcon } from '@deriv/quill-icons/Legacy';
 import SearchInput from './common/search-input';
 import { TTutorialsTabItem } from './tutorials';
 
@@ -13,7 +15,7 @@ type TTutorialsTabMobile = {
 };
 
 const TutorialsTabMobile = observer(({ tutorial_tabs, prev_active_tutorials }: TTutorialsTabMobile) => {
-    const { dashboard } = useDBotStore();
+    const { dashboard } = useStore();
     const { active_tab_tutorials, faq_search_value, setActiveTabTutorial, setFAQSearchValue, resetTutorialTabContent } =
         dashboard;
 
@@ -67,9 +69,17 @@ const TutorialsTabMobile = observer(({ tutorial_tabs, prev_active_tutorials }: T
         const selectElement = document.getElementById('dt_components_select-native_select-tag') as HTMLSelectElement;
 
         if (selectElement) {
-            selectElement.removeChild(selectElement?.options[3]);
+            const parent_element = selectElement;
+            const child_element = selectElement?.options?.[3];
+
+            if (parent_element && child_element && parent_element?.contains(child_element)) {
+                parent_element?.removeChild(child_element);
+            }
         }
     }, []);
+
+    const is_desktop = isDesktop();
+    const is_safari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
     return (
         <div className='tutorials-mobile' data-testid='test-tutorials-mobile'>
@@ -77,14 +87,14 @@ const TutorialsTabMobile = observer(({ tutorial_tabs, prev_active_tutorials }: T
                 className={classNames('tutorials-mobile__select', {
                     'tutorials-mobile__select--show-search': showSearchBar,
                     'tutorials-mobile__select--hide-search': !showSearchBar,
+                    'tutorials-mobile--safari': is_safari && !is_desktop,
                 })}
                 data-testid={showSearchBar ? 'id-search-visible' : 'id-search-hidden'}
             >
-                <Icon
+                <LabelPairedArrowLeftSmRegularIcon
                     onClick={onClickBackButton}
-                    data_testid='id-arrow-left-bold'
+                    data-testid='id-arrow-left-bold'
                     className='arrow-left-bold'
-                    icon='IcArrowLeftBold'
                 />
                 <SearchInput
                     faq_value={faq_search_value}
@@ -92,13 +102,10 @@ const TutorialsTabMobile = observer(({ tutorial_tabs, prev_active_tutorials }: T
                     prev_active_tutorials={prev_active_tutorials}
                 />
                 {search && (
-                    <Icon
-                        data_testid='id-close-icon'
+                    <LegacyCloseCircle1pxBlackIcon
+                        iconSize='xs'
                         className='close-icon'
                         data-testid='id-test-search'
-                        width='1.6rem'
-                        height='1.6rem'
-                        icon='IcDbotClose'
                         onClick={onCloseHandleSearch}
                     />
                 )}
@@ -121,11 +128,10 @@ const TutorialsTabMobile = observer(({ tutorial_tabs, prev_active_tutorials }: T
                         scrollToTop();
                     }}
                 />
-                <Icon
-                    onClick={onHandleChangeMobile}
+                <LabelPairedSearchSmRegularIcon
                     className='search-icon'
-                    icon='IcSearch'
-                    data_testid='search-icon'
+                    data-testid='search-icon'
+                    onClick={onHandleChangeMobile}
                 />
             </div>
             <div

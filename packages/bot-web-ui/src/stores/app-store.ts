@@ -1,16 +1,22 @@
-import { action, makeObservable, reaction, when } from 'mobx';
-import { TApiHelpersStore, TDbotStore } from 'src/types/stores.types';
-import { ApiHelpers, DBot, runIrreversibleEvents } from '@deriv/bot-skeleton';
-import { ContentFlag, isEuResidenceWithOnlyVRTC, routes, showDigitalOptionsUnavailableError } from '@deriv/shared';
-import { TStores } from '@deriv/stores/types';
-import { localize } from '@deriv/translations';
+import Cookies from 'js-cookie';
+import { action, makeObservable, observable, reaction, when } from 'mobx';
+import { BOT_RESTRICTED_COUNTRIES_LIST } from '@/components/layout/header/utils';
+import {
+    ContentFlag,
+    isEuResidenceWithOnlyVRTC,
+    showDigitalOptionsUnavailableError,
+    standalone_routes,
+} from '@/components/shared';
+import { api_base, ApiHelpers, DBot, runIrreversibleEvents } from '@/external/bot-skeleton';
+import { setCurrency } from '@/external/bot-skeleton/scratch/utils';
+import { TApiHelpersStore } from '@/types/stores.types';
+import { localize } from '@deriv-com/translations';
 import RootStore from './root-store';
-import { setCurrency } from '@deriv/bot-skeleton/src/scratch/utils';
 
 export default class AppStore {
     root_store: RootStore;
-    core: TStores;
-    dbot_store: TDbotStore | null;
+    core: RootStore['core'];
+    dbot_store: RootStore | null;
     api_helpers_store: TApiHelpersStore | null;
     timer: ReturnType<typeof setInterval> | null;
     disposeReloadOnLanguageChangeReaction: unknown;
@@ -19,12 +25,10 @@ export default class AppStore {
     disposeLandingCompanyChangeReaction: unknown;
     disposeResidenceChangeReaction: unknown;
 
-    constructor(root_store: RootStore, core: TStores) {
+    constructor(root_store: RootStore, core: RootStore['core']) {
         makeObservable(this, {
             onMount: action,
             onUnmount: action,
-            onBeforeUnload: action,
-            registerReloadOnLanguageChange: action,
             registerCurrencyReaction: action,
             registerOnAccountSwitch: action,
             registerLandingCompanyChangeReaction: action,
@@ -32,6 +36,7 @@ export default class AppStore {
             setDBotEngineStores: action,
             onClickOutsideBlockly: action,
             showDigitalOptionsMaltainvestError: action,
+            api_helpers_store: observable,
         });
 
         this.root_store = root_store;
@@ -55,95 +60,107 @@ export default class AppStore {
             title: is_logged_in
                 ? localize(`Deriv Bot is not available for ${country || 'EU'} clients`)
                 : localize(`Deriv Bot is unavailable in ${country || 'the EU'}`),
-            link: is_logged_in ? localize("Back to Trader's Hub") : '',
-            route: routes.traders_hub,
+            link: is_logged_in ? localize("Back to Trader's Hub") : localize('Refresh'),
+            route: standalone_routes.traders_hub,
         };
     };
 
     throwErrorForExceptionCountries = (client_country: string) => {
         const { client, common } = this.core;
+        const bot_resticted_countries = BOT_RESTRICTED_COUNTRIES_LIST();
 
         const not_allowed_clients_country: { [key: string]: string } = {
-            au: 'Australian',
-            sg: 'Singaporean',
+            ...bot_resticted_countries,
         };
 
         const country_name = not_allowed_clients_country[client_country];
 
         if (country_name) {
             return showDigitalOptionsUnavailableError(
-                common.showError,
+                common.showError as any,
                 this.getErrorForEuClients(client.is_logged_in, country_name)
             );
         }
     };
 
-    handleErrorForEu = (show_default_error = false) => {
-        const { client, common, ui, traders_hub } = this.core;
-        const toggleAccountsDialog = ui?.toggleAccountsDialog;
+    handleErrorForEu = () => {
+        const { client, common } = this.core;
+        const { is_landing_company_loaded } = client;
 
-        if (!client?.is_logged_in && client?.is_eu_country) {
-            if (client?.has_logged_out) {
-                window.location.href = routes.traders_hub;
-            }
+        // Check if we're in the process of logging in
+        // When isSingleLoggingIn is true, we don't want to show the EU error message
+        const is_tmb_enabled = window.is_tmb_enabled === true;
+        const isSingleLoggingIn =
+            window.location.pathname === '/callback' ||
+            (Cookies.get('logged_state') === 'true' &&
+                !is_tmb_enabled &&
+                Object.keys(JSON.parse(localStorage.getItem('accountsList') || '{}')).length === 0);
 
-            this.throwErrorForExceptionCountries(client?.clients_country);
-            return showDigitalOptionsUnavailableError(common.showError, this.getErrorForEuClients());
-        }
-
-        if (!client.is_landing_company_loaded) {
+        if (isSingleLoggingIn) {
+            common.setError(false, {});
             return false;
         }
 
-        if (window.location.pathname.includes(routes.bot)) {
-            this.throwErrorForExceptionCountries(client?.account_settings?.country_code as string);
-            if (client.should_show_eu_error) {
-                return showDigitalOptionsUnavailableError(
-                    common.showError,
-                    this.getErrorForEuClients(client.is_logged_in)
-                );
-            }
-
-            if (traders_hub.content_flag === ContentFlag.HIGH_RISK_CR) {
-                return false;
-            }
-
-            if (traders_hub.content_flag === ContentFlag.LOW_RISK_CR_EU && toggleAccountsDialog) {
-                return showDigitalOptionsUnavailableError(
-                    common.showError,
-                    this.getErrorForNonEuClients(),
-                    toggleAccountsDialog,
-                    false,
-                    false
-                );
-            }
-
-            if (
-                ((!client.is_bot_allowed && client.is_eu && client.should_show_eu_error) ||
-                    isEuResidenceWithOnlyVRTC(client.active_accounts) ||
-                    client.is_options_blocked) &&
-                toggleAccountsDialog
-            ) {
-                return showDigitalOptionsUnavailableError(
-                    common.showError,
-                    this.getErrorForNonEuClients(),
-                    toggleAccountsDialog,
-                    false,
-                    false
-                );
-            }
+        if (!client?.is_logged_in && client?.is_eu_country) {
+            this.throwErrorForExceptionCountries(client?.clients_country as string);
+            return showDigitalOptionsUnavailableError(common.showError as any, this.getErrorForEuClients());
         }
 
-        if (show_default_error && common.has_error) {
-            if (common.setError) common.setError(false, { message: '' });
+        if (is_landing_company_loaded !== undefined && !is_landing_company_loaded) {
+            common.setError(false, {});
+            return false;
         }
+
+        this.throwErrorForExceptionCountries(client?.account_settings?.country_code as string);
+        if (client.should_show_eu_error) {
+            return showDigitalOptionsUnavailableError(
+                common.showError as any,
+                this.getErrorForEuClients(client.is_logged_in)
+            );
+        }
+
+        if (client.content_flag === ContentFlag.HIGH_RISK_CR) {
+            common.setError(false, {});
+            return false;
+        }
+
+        if (client.content_flag === ContentFlag.LOW_RISK_CR_EU) {
+            return showDigitalOptionsUnavailableError(
+                common.showError as any,
+                this.getErrorForNonEuClients(),
+                () => {
+                    // TODOL: need to fix this from the deriv ui package
+                    (document.querySelector('.deriv-account-switcher__button') as HTMLElement)?.click();
+                },
+                false,
+                false
+            );
+        }
+
+        if (
+            (!client.is_bot_allowed && client.is_eu && client.should_show_eu_error) ||
+            isEuResidenceWithOnlyVRTC(client.active_accounts as any) ||
+            client.is_options_blocked
+        ) {
+            return showDigitalOptionsUnavailableError(
+                common.showError as any,
+                this.getErrorForNonEuClients(),
+                () => {
+                    // TODOL: need to fix this from the deriv ui package
+                    (document.querySelector('.deriv-account-switcher__button') as HTMLElement)?.click();
+                },
+                false,
+                false
+            );
+        }
+
+        common.setError(false, {});
         return false;
     };
 
-    onMount = () => {
+    onMount = async () => {
         const { blockly_store, run_panel } = this.root_store;
-        const { client, ui, traders_hub } = this.core;
-        const { is_dark_mode_on } = ui;
+        const { client, ui } = this.core;
         this.showDigitalOptionsMaltainvestError();
 
         let timer_counter = 1;
@@ -160,35 +177,51 @@ export default class AppStore {
             }
         }, 10000);
 
-        blockly_store.setLoading(true);
-        DBot.initWorkspace(
-            __webpack_public_path__,
-            this.dbot_store,
-            this.api_helpers_store,
-            ui.is_mobile,
-            is_dark_mode_on
-        ).then(() => {
-            blockly_store.setContainerSize();
+        if (!this.dbot_store) {
+            console.error('[AppStore] dbot_store MISSING in onMount');
             blockly_store.setLoading(false);
-        });
-        this.registerReloadOnLanguageChange();
+            return;
+        }
+
+        blockly_store.setLoading(true);
+        console.warn('[AppStore] Starting DBot.initWorkspace reach-out...');
+        
+        let retries = 0;
+        let scratchDiv = document.getElementById('scratch_div');
+        
+        while (!scratchDiv && retries < 10) {
+            console.warn(`[AppStore] scratch_div not found, retry ${retries + 1}/10...`);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            scratchDiv = document.getElementById('scratch_div');
+            retries++;
+        }
+
+        try {
+            await DBot.initWorkspace('/', this.dbot_store, this.api_helpers_store, ui.is_mobile, ui.is_dark_mode_on);
+            console.warn('[AppStore] DBot.initWorkspace FINISHED');
+        } catch (e) {
+            console.error('[AppStore] DBot.initWorkspace FAILED', e);
+        }
+
+        blockly_store.setContainerSize();
+        blockly_store.setLoading(false);
+
         this.registerCurrencyReaction.call(this);
         this.registerOnAccountSwitch.call(this);
         this.registerLandingCompanyChangeReaction.call(this);
         this.registerResidenceChangeReaction.call(this);
 
         window.addEventListener('click', this.onClickOutsideBlockly);
-        window.addEventListener('beforeunload', this.onBeforeUnload);
 
         blockly_store.getCachedActiveTab();
 
         when(
-            () => client?.should_show_eu_error || client?.is_landing_company_loaded,
+            () => !!(client?.should_show_eu_error || client?.is_landing_company_loaded),
             () => this.showDigitalOptionsMaltainvestError()
         );
 
         reaction(
-            () => traders_hub?.content_flag,
+            () => client?.content_flag,
             () => this.showDigitalOptionsMaltainvestError()
         );
     };
@@ -196,9 +229,9 @@ export default class AppStore {
     onUnmount = () => {
         DBot.terminateBot();
         DBot.terminateConnection();
-        if (window.Blockly.derivWorkspace) {
-            clearInterval(window.Blockly.derivWorkspace.save_workspace_interval);
-            window.Blockly.derivWorkspace.dispose();
+        if ((window as any).Blockly?.derivWorkspace) {
+            clearInterval((window as any).Blockly?.derivWorkspace.save_workspace_interval);
+            (window as any).Blockly.derivWorkspace?.dispose();
         }
         if (typeof this.disposeReloadOnLanguageChangeReaction === 'function') {
             this.disposeReloadOnLanguageChangeReaction();
@@ -217,38 +250,16 @@ export default class AppStore {
         }
 
         window.removeEventListener('click', this.onClickOutsideBlockly);
-        window.removeEventListener('beforeunload', this.onBeforeUnload);
 
         // Ensure account switch is re-enabled.
+        // TODO: fix
         const { ui } = this.core;
 
-        ui.setAccountSwitcherDisabledMessage();
-        ui.setPromptHandler(false);
+        (ui as any).setAccountSwitcherDisabledMessage();
+        (ui as any).setPromptHandler(false);
 
         if (this.timer) clearInterval(this.timer);
         performance.clearMeasures();
-    };
-
-    onBeforeUnload = (event: Event) => {
-        const { is_stop_button_visible } = this.root_store.run_panel;
-
-        if (is_stop_button_visible) {
-            event.returnValue = true;
-        }
-    };
-
-    registerReloadOnLanguageChange = () => {
-        this.disposeReloadOnLanguageChangeReaction = reaction(
-            () => this.core.common.current_language,
-            () => {
-                // temporarily added this to refresh just dbot in case of changing language,
-                // otherwise it should change language without refresh.
-                const { pathname } = window.location;
-                const is_bot =
-                    /^\/bot/.test(pathname) || (/^\/(br_)/.test(pathname) && pathname.split('/')[2] === 'bot');
-                if (is_bot) window.location.reload();
-            }
-        );
     };
 
     registerCurrencyReaction = () => {
@@ -256,12 +267,12 @@ export default class AppStore {
         this.disposeCurrencyReaction = reaction(
             () => this.core.client.currency,
             () => {
-                if (!window.Blockly.derivWorkspace) return;
+                if (!(window as any).Blockly?.derivWorkspace) return;
 
-                const trade_options_blocks = window.Blockly.derivWorkspace
+                const trade_options_blocks = (window as any).Blockly?.derivWorkspace
                     .getAllBlocks()
                     .filter(
-                        b =>
+                        (b: any) =>
                             b.type === 'trade_definition_tradeoptions' ||
                             b.type === 'trade_definition_multiplier' ||
                             b.type === 'trade_definition_accumulator' ||
@@ -274,27 +285,41 @@ export default class AppStore {
     };
 
     registerOnAccountSwitch = () => {
-        const { client } = this.core;
-
         this.disposeSwitchAccountListener = reaction(
-            () => client.switch_broadcast,
-            switch_broadcast => {
-                if (!switch_broadcast) return;
+            () => this.root_store.common?.is_socket_opened,
+            is_socket_opened => {
+                if (!is_socket_opened) return;
+                this.api_helpers_store = {
+                    server_time: this.root_store.common.server_time,
+                    ws: api_base.api,
+                    ticks_service: ApiHelpers?.instance?.ticks_service,
+                };
+
+                if (!ApiHelpers?.instance) {
+                    ApiHelpers.setInstance(this.api_helpers_store);
+                }
+
+                this.api_helpers_store = {
+                    ...this.api_helpers_store,
+                    ticks_service: ApiHelpers?.instance?.ticks_service,
+                };
+
                 this.showDigitalOptionsMaltainvestError();
 
-                if (ApiHelpers.instance) {
-                    const { active_symbols, contracts_for } = ApiHelpers.instance;
+                const active_symbols = ApiHelpers?.instance?.active_symbols;
+                const contracts_for = ApiHelpers?.instance?.contracts_for;
 
-                    if (window.Blockly.derivWorkspace) {
-                        active_symbols.retrieveActiveSymbols(true).then(() => {
+                if (ApiHelpers?.instance && active_symbols && contracts_for) {
+                    if ((window as any).Blockly?.derivWorkspace) {
+                        active_symbols?.retrieveActiveSymbols(true).then(() => {
                             contracts_for.disposeCache();
-                            window.Blockly.derivWorkspace
+                            (window as any).Blockly?.derivWorkspace
                                 .getAllBlocks()
-                                .filter(block => block.type === 'trade_definition_market')
-                                .forEach(block => {
+                                .filter((block: any) => block.type === 'trade_definition_market')
+                                .forEach((block: any) => {
                                     runIrreversibleEvents(() => {
-                                        const fake_create_event = new window.Blockly.Events.BlockCreate(block);
-                                        window.Blockly.Events.fire(fake_create_event);
+                                        const fake_create_event = new (window as any).Blockly.Events.BlockCreate(block);
+                                        (window as any).Blockly.Events.fire(fake_create_event);
                                     });
                                 });
                         });
@@ -318,16 +343,15 @@ export default class AppStore {
         const { client } = this.core;
 
         this.disposeResidenceChangeReaction = reaction(
-            () => client.account_settings.country_code,
+            () => client.account_settings?.country_code,
             () => this.handleErrorForEu()
         );
     };
 
     setDBotEngineStores = () => {
-        // DO NOT pass the rootstore in, if you need a prop define it in dbot-skeleton-store and pass it through.
         const { flyout, toolbar, save_modal, dashboard, load_modal, run_panel, blockly_store, summary_card } =
             this.root_store;
-        const { client } = this.core;
+        const { client, common } = this.core;
         const { handleFileChange } = load_modal;
         const { setLoading } = blockly_store;
         const { setContractUpdateConfig } = summary_card;
@@ -347,28 +371,38 @@ export default class AppStore {
             setContractUpdateConfig,
             handleFileChange,
             is_mobile,
-        };
+            common,
+        } as any;
+
+        // Initialize ApiHelpers if not already done
+        if (!ApiHelpers.instance && api_base.api) {
+            ApiHelpers.setInstance({
+                server_time: common.server_time,
+                ws: api_base.api,
+            });
+        }
 
         this.api_helpers_store = {
-            server_time: this.core.common.server_time,
-            ws: this.root_store.ws,
+            server_time: common.server_time,
+            ws: api_base.api,
+            ticks_service: ApiHelpers.instance?.ticks_service,
         };
     };
 
     onClickOutsideBlockly = (event: Event) => {
         if (document.querySelector('.injectionDiv')) {
-            const path = event.path || (event.composedPath && event.composedPath());
+            const path = (event as any).path || (event.composedPath && event.composedPath());
             const is_click_outside_blockly = !path.some(
                 (el: Element) => el.classList && el.classList.contains('injectionDiv')
             );
 
             if (is_click_outside_blockly) {
-                window.Blockly?.hideChaff(/* allowToolbox */ false);
+                (window as any).Blockly?.hideChaff(/* allowToolbox */ false);
             }
         }
     };
 
     showDigitalOptionsMaltainvestError = () => {
-        this.handleErrorForEu(true);
+        this.handleErrorForEu();
     };
 }

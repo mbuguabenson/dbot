@@ -1,6 +1,4 @@
-import React from 'react';
-
-import { Text } from '@deriv/components';
+import Text from '@/components/shared_ui/text';
 
 type TTourButton = {
     type?: string;
@@ -12,7 +10,7 @@ const TourButton = ({ label, type = 'default', ...props }: TTourButton) => {
     if (!label) return null;
     return (
         <button className={type} {...props}>
-            <Text color='prominent' align='center' weight='bold' as='span' line_height='s' size='xs'>
+            <Text color='prominent' align='center' weight='bold' as='span' lineHeight='s' size='xs'>
                 {label}
             </Text>
         </button>

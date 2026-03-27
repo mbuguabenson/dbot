@@ -1,7 +1,6 @@
 import { action, makeObservable, observable, runInAction } from 'mobx';
-import { config } from '@deriv/bot-skeleton';
-import { help_content_config } from 'Utils/help-content/help-content.config';
-import * as help_strings from 'Utils/help-content/help-strings';
+import { help_content_config } from '@/utils/help-content/help-content.config';
+import * as help_strings from '@/utils/help-content/help-strings';
 import RootStore from './root-store';
 
 export default class FlyoutHelpStore {
@@ -32,24 +31,17 @@ export default class FlyoutHelpStore {
         this.root_store = root_store;
     }
 
-    options = {
-        media: `${__webpack_public_path__}media/`,
-        move: { scrollbars: false, drag: true, wheel: false },
-        zoom: { startScale: config.workspaces.flyoutWorkspacesStartScale },
-        sounds: false,
-    };
-
     block_node = null;
     block_type = '';
     examples = [];
-    help_string = {};
+    help_string: Record<string, React.ReactNode[]> = {};
     title = '';
     should_next_disable = false;
     should_previous_disable = false;
     active_helper = '';
 
     setHelpContent = async block_node => {
-        const block_type = block_node.getAttribute('type');
+        const block_type: keyof typeof help_strings | '' = block_node.getAttribute('type');
         const title = window.Blockly.Blocks[block_type].meta().display_name;
         if (block_type !== '') {
             this.active_helper = block_type;
@@ -65,7 +57,12 @@ export default class FlyoutHelpStore {
             this.block_node = block_node;
             this.block_type = block_type;
             this.title = title;
-            this.help_string = help_strings[block_type];
+
+            if (block_type !== '') {
+                for (const [key, value] of Object.entries(help_strings[block_type])) {
+                    this.help_string[key] = value();
+                }
+            }
         });
 
         if (!flyout.is_search_flyout) {
@@ -137,7 +134,7 @@ export default class FlyoutHelpStore {
             }
 
             try {
-                await import(/* webpackChunkName: `[request]` */ '@deriv/bot-skeleton');
+                await import(/* webpackChunkName: `[request]` */ '@/external/bot-skeleton');
                 return next_block_type;
             } catch (e) {
                 return getNextBlock(xml, next_index, is_next);
@@ -200,7 +197,7 @@ export default class FlyoutHelpStore {
     setExamples(block_type) {
         const { toolbox } = this.root_store;
         const all_examples = [...toolbox.toolbox_examples.childNodes];
-        const help_content = help_content_config(__webpack_public_path__)[block_type];
+        const help_content = help_content_config(window.__webpack_public_path__)[block_type];
         const examples_ids = help_content.filter(el => el.type === 'example').map(example => example.example_id);
         const examples = examples_ids.map(id => all_examples.find(example => example.id === id));
 

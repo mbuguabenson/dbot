@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import classNames from 'classnames';
-import { Icon, Text } from '@deriv/components';
-import { localize } from '@deriv/translations';
-import { useDBotStore } from 'Stores/useDBotStore';
+import Text from '@/components/shared_ui/text';
+import { useStore } from '@/hooks/useStore';
+import { LabelPairedMinusCaptionRegularIcon, LabelPairedPlusCaptionRegularIcon } from '@deriv/quill-icons/LabelPaired';
 
 type TContentData = {
     header: string;
@@ -37,7 +37,7 @@ const Accordion = ({
     const [is_open, setOpen] = useState(expanded);
     const {
         quick_strategy: { selected_strategy },
-    } = useDBotStore();
+    } = useStore();
     if (!content_data) return null;
     const { content, header } = content_data;
 
@@ -71,12 +71,19 @@ const Accordion = ({
                         })}
                     >
                         <Text as='span' size={font_size} weight='bold'>
-                            {localize(header)}
+                            {header}
                         </Text>
                     </div>
                     {no_collapsible && (
                         <div className='dbot-accordion__icon'>
-                            <Icon icon={should_be_expanded ? 'IcMinus' : 'IcAdd'} />
+                            {
+                                // eslint-disable-next-line no-nested-ternary
+                                should_be_expanded ? (
+                                    <LabelPairedMinusCaptionRegularIcon />
+                                ) : (
+                                    <LabelPairedPlusCaptionRegularIcon />
+                                )
+                            }
                         </div>
                     )}
                 </button>
@@ -87,7 +94,7 @@ const Accordion = ({
                 })}
                 data-testid='accordion-content'
             >
-                <Text as='span' line_height='s' size={font_size}>
+                <Text as='span' lineHeight='s' size={font_size}>
                     {content}
                 </Text>
             </div>

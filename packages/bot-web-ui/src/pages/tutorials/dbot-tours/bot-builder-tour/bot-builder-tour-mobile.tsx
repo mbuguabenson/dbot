@@ -1,16 +1,17 @@
 import React from 'react';
-import { ProgressBarTracker, Text } from '@deriv/components';
-import { observer } from '@deriv/stores';
-import { localize } from '@deriv/translations';
-import { getSetting } from 'Utils/settings';
-import { useDBotStore } from 'Stores/useDBotStore';
+import { observer } from 'mobx-react-lite';
+import ProgressBarTracker from '@/components/shared_ui/progress-bar-tracker';
+import Text from '@/components/shared_ui/text';
+import { useStore } from '@/hooks/useStore';
+import { getSetting } from '@/utils/settings';
+import { localize } from '@deriv-com/translations';
 import TourButton from '../common/tour-button';
 import TourStartDialog from '../common/tour-start-dialog';
 import { BOT_BUILDER_MOBILE } from '../tour-content';
 import { highlightLoadModalButton } from '../utils';
 
 const BotBuilderTourMobile = observer(() => {
-    const { dashboard, load_modal, quick_strategy } = useDBotStore();
+    const { dashboard, load_modal, quick_strategy } = useStore();
     const { toggleTourLoadModal } = load_modal;
     const {
         onTourEnd,
@@ -59,7 +60,7 @@ const BotBuilderTourMobile = observer(() => {
                         </Text>
                     </div>
                     <div className='dbot-slider__content'>
-                        <Text as='span' line_height='s' size='xxs'>
+                        <Text as='span' lineHeight='s' size='xs'>
                             {content_data?.content}
                         </Text>
                     </div>

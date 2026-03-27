@@ -1,11 +1,13 @@
 import React from 'react';
 import classNames from 'classnames';
-import { Dialog, Icon, Text } from '@deriv/components';
-import { useStore } from '@deriv/stores';
-import { Localize, localize } from '@deriv/translations';
-import { DBOT_TABS } from 'Constants/bot-contents';
-import { removeKeyValue } from 'Utils/settings';
-import { useDBotStore } from 'Stores/useDBotStore';
+import Dialog from '@/components/shared_ui/dialog';
+import Text from '@/components/shared_ui/text';
+import { DBOT_TABS } from '@/constants/bot-contents';
+import { useStore } from '@/hooks/useStore';
+import { removeKeyValue } from '@/utils/settings';
+import { LegacyPlay1pxIcon } from '@deriv/quill-icons/Legacy';
+import { Localize, localize } from '@deriv-com/translations';
+import { useDevice } from '@deriv-com/ui';
 
 type TGuideList = {
     content?: string;
@@ -24,9 +26,8 @@ type TGuideContent = {
 };
 
 const GuideContent = ({ guide_tab_content, video_tab_content, is_dialog_open }: TGuideContent) => {
-    const { ui } = useStore();
-    const { is_desktop } = ui;
-    const { dashboard } = useDBotStore();
+    const { isDesktop } = useDevice();
+    const { dashboard } = useStore();
     const {
         dialog_options,
         onCloseDialog: onOkButtonClick,
@@ -41,13 +42,25 @@ const GuideContent = ({ guide_tab_content, video_tab_content, is_dialog_open }: 
         if (type === 'OnBoard') {
             removeKeyValue('onboard_tour_token');
             setActiveTab(DBOT_TABS.DASHBOARD);
-            if (!is_desktop) setActiveTour('onboarding');
+            if (!isDesktop) setActiveTour('onboarding');
             setTourDialogVisibility(true);
+            setTimeout(() => {
+                const dbotDashboardSection = document.getElementById('id-dbot-dashboard');
+                if (dbotDashboardSection) {
+                    dbotDashboardSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }, 100);
         } else {
             setActiveTab(DBOT_TABS.BOT_BUILDER);
-            if (!is_desktop) setActiveTour('bot_builder');
+            if (!isDesktop) setActiveTour('bot_builder');
             setTourDialogVisibility(true);
-            if (!is_desktop) setShowMobileTourDialog(true);
+            if (!isDesktop) setShowMobileTourDialog(true);
+            setTimeout(() => {
+                const botBuilderSection = document.getElementById('id-bot-builder');
+                if (botBuilderSection) {
+                    botBuilderSection.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                }
+            }, 100);
         }
     };
 
@@ -68,8 +81,8 @@ const GuideContent = ({ guide_tab_content, video_tab_content, is_dialog_open }: 
                                     align='left'
                                     weight='bold'
                                     color='prominent'
-                                    line_height='s'
-                                    size={is_desktop ? 's' : 'xs'}
+                                    lineHeight='s'
+                                    size={isDesktop ? 's' : 'xs'}
                                 >
                                     <Localize i18n_default_text='Step-by-step guides' />
                                 </Text>
@@ -79,11 +92,9 @@ const GuideContent = ({ guide_tab_content, video_tab_content, is_dialog_open }: 
                                     return (
                                         <div className='tutorials-wrap__group__cards' key={id}>
                                             <div
-                                                tabIndex={id}
                                                 className='tutorials-wrap--tour'
                                                 onClick={() => triggerTour(subtype)}
                                                 onKeyDown={handleKeyboardEvent}
-                                                data-testid='tutorials-wrap--tour'
                                             >
                                                 <div
                                                     className={classNames('tutorials-wrap__placeholder__tours', {
@@ -97,8 +108,8 @@ const GuideContent = ({ guide_tab_content, video_tab_content, is_dialog_open }: 
                                             <Text
                                                 align='center'
                                                 color='prominent'
-                                                line_height='s'
-                                                size={is_desktop ? 's' : 'xs'}
+                                                lineHeight='s'
+                                                size={isDesktop ? 's' : 'xs'}
                                             >
                                                 {content}
                                             </Text>
@@ -116,8 +127,8 @@ const GuideContent = ({ guide_tab_content, video_tab_content, is_dialog_open }: 
                                     align='left'
                                     weight='bold'
                                     color='prominent'
-                                    line_height='s'
-                                    size={is_desktop ? 's' : 'xs'}
+                                    lineHeight='s'
+                                    size={isDesktop ? 's' : 'xs'}
                                 >
                                     <Localize i18n_default_text='Videos on Deriv Bot' />
                                 </Text>
@@ -136,11 +147,10 @@ const GuideContent = ({ guide_tab_content, video_tab_content, is_dialog_open }: 
                                                 }}
                                             >
                                                 <div className='tutorials-wrap__placeholder__button-group'>
-                                                    <Icon
+                                                    <LegacyPlay1pxIcon
                                                         className='tutorials-wrap__placeholder__button-group--play'
-                                                        width='4rem'
-                                                        height='4rem'
-                                                        icon={'IcPlayOutline'}
+                                                        width='42px'
+                                                        height='42px'
                                                         onClick={() =>
                                                             showVideoDialog({
                                                                 type: 'url',
@@ -154,8 +164,8 @@ const GuideContent = ({ guide_tab_content, video_tab_content, is_dialog_open }: 
                                                 <Text
                                                     align='left'
                                                     color='prominent'
-                                                    line_height='s'
-                                                    size={is_desktop ? 's' : 'xs'}
+                                                    lineHeight='s'
+                                                    size={isDesktop ? 's' : 'xs'}
                                                 >
                                                     {content}
                                                 </Text>

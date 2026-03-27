@@ -1,13 +1,15 @@
 import React from 'react';
-import { observer, useStore } from '@deriv/stores';
-import { localize } from '@deriv/translations';
-import { useDBotStore } from 'Stores/useDBotStore';
+import { observer } from 'mobx-react-lite';
+import { useStore } from '@/hooks/useStore';
+import { localize } from '@deriv-com/translations';
+import { useDevice } from '@deriv-com/ui';
 import NoSearchResult from './common/no-search-result-found';
 import QuickStrategyGuides from './quick-strategy-content/quick-strategy-guides';
 import FAQContent from './faq-content';
 import GuideContent from './guide-content';
 import TutorialsTabDesktop from './tutorials-tab-desktop';
 import TutorialsTabMobile from './tutorials-tab-mobile';
+import './tutorials.scss';
 
 type TTutorialsTab = {
     handleTabChange: (active_number: number) => void;
@@ -19,10 +21,9 @@ export type TTutorialsTabItem = {
 };
 
 const TutorialsTab = observer(({ handleTabChange }: TTutorialsTab) => {
-    const { ui } = useStore();
-    const { is_desktop } = ui;
-    const { dashboard } = useDBotStore();
-    const [prev_active_tutorials, setPrevActiveTutorialsTab] = React.useState<number | null>(0);
+    const { isDesktop } = useDevice();
+    const { dashboard } = useStore();
+    const [prev_active_tutorials, setPrevActiveTutorialsTab] = React.useState<number>(0);
 
     const {
         active_tab_tutorials,
@@ -40,10 +41,10 @@ const TutorialsTab = observer(({ handleTabChange }: TTutorialsTab) => {
     }, [active_tab_tutorials]);
 
     const has_content_guide_tab =
-        guide_tab_content.length > 0 ||
-        video_tab_content.length > 0 ||
-        faq_tab_content.length > 0 ||
-        quick_strategy_tab_content.length > 0;
+        guide_tab_content().length > 0 ||
+        video_tab_content().length > 0 ||
+        faq_tab_content().length > 0 ||
+        quick_strategy_tab_content().length > 0;
 
     const tutorial_tabs: TTutorialsTabItem[] = [
         {
@@ -51,18 +52,18 @@ const TutorialsTab = observer(({ handleTabChange }: TTutorialsTab) => {
             content: (
                 <GuideContent
                     is_dialog_open={is_dialog_open}
-                    guide_tab_content={guide_tab_content}
-                    video_tab_content={video_tab_content}
+                    guide_tab_content={guide_tab_content()}
+                    video_tab_content={video_tab_content()}
                 />
             ),
         },
         {
             label: localize('FAQ'),
-            content: <FAQContent faq_list={faq_tab_content} handleTabChange={handleTabChange} />,
+            content: <FAQContent faq_list={faq_tab_content()} handleTabChange={handleTabChange} />,
         },
         {
             label: localize('Quick strategy guides'),
-            content: <QuickStrategyGuides quick_strategy_tab_content={quick_strategy_tab_content} />,
+            content: <QuickStrategyGuides />,
         },
         {
             label: localize('Search'),
@@ -70,11 +71,11 @@ const TutorialsTab = observer(({ handleTabChange }: TTutorialsTab) => {
                 <>
                     <GuideContent
                         is_dialog_open={is_dialog_open}
-                        guide_tab_content={guide_tab_content}
-                        video_tab_content={video_tab_content}
+                        guide_tab_content={guide_tab_content()}
+                        video_tab_content={video_tab_content()}
                     />
-                    <FAQContent faq_list={faq_tab_content} />
-                    <QuickStrategyGuides quick_strategy_tab_content={quick_strategy_tab_content} />
+                    <FAQContent faq_list={faq_tab_content()} handleTabChange={handleTabChange} />
+                    <QuickStrategyGuides />
                 </>
             ) : (
                 <NoSearchResult />
@@ -82,7 +83,7 @@ const TutorialsTab = observer(({ handleTabChange }: TTutorialsTab) => {
         },
     ];
 
-    return is_desktop ? (
+    return isDesktop ? (
         <TutorialsTabDesktop tutorial_tabs={tutorial_tabs} prev_active_tutorials={prev_active_tutorials} />
     ) : (
         <TutorialsTabMobile tutorial_tabs={tutorial_tabs} prev_active_tutorials={prev_active_tutorials} />

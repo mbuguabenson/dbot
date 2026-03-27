@@ -1,8 +1,13 @@
-import { TStores } from '@deriv/stores/types';
-import type { TDbot, TWebSocket } from 'Types';
+import { api_base } from '@/external/bot-skeleton/services/api/api-base';
+import AnalysisStore from './analysis-store';
+import AnalysisMarketStore from './analysis-market-store';
 import AppStore from './app-store';
+import AutoTraderStore from './auto-trader-store';
 import BlocklyStore from './blockly-store';
 import ChartStore from './chart-store';
+import ClientStore from './client-store';
+import CommonStore from './common-store';
+import CopyTraderStore from './copy-trader-store';
 import DashboardStore from './dashboard-store';
 import DataCollectionStore from './data-collection-store';
 import FlyoutHelpStore from './flyout-help-store';
@@ -11,21 +16,28 @@ import GoogleDriveStore from './google-drive-store';
 import JournalStore from './journal-store';
 import LoadModalStore from './load-modal-store';
 import QuickStrategyStore from './quick-strategy-store';
-import RoutePromptDialogStore from './route-prompt-dialog-store';
 import RunPanelStore from './run-panel-store';
 import SaveModalStore from './save-modal-store';
 import SelfExclusionStore from './self-exclusion-store';
+import SmartTradingStore from './smart-trading-store';
 import SummaryCardStore from './summary-card-store';
 import ToolbarStore from './toolbar-store';
 import ToolboxStore from './toolbox-store';
 import TransactionsStore from './transactions-store';
+import UiStore from './ui-store';
+import SmartAutoStore from './smart-auto-store';
+import DigitCrackerStore from './digit-cracker-store';
+import AdminStore from './admin-store';
 
 // TODO: need to write types for the individual classes and convert them to ts
 export default class RootStore {
-    public ws: TWebSocket;
-    public dbot: TDbot;
+    public dbot;
+    public analysis: AnalysisStore;
+    public analysis_market: AnalysisMarketStore;
     public app: AppStore;
     public summary_card: SummaryCardStore;
+    public auto_trader: AutoTraderStore;
+    public copy_trader: CopyTraderStore;
     public flyout: FlyoutStore;
     public flyout_help: FlyoutHelpStore;
     public google_drive: GoogleDriveStore;
@@ -37,37 +49,70 @@ export default class RootStore {
     public toolbar: ToolbarStore;
     public toolbox: ToolboxStore;
     public quick_strategy: QuickStrategyStore;
-    public route_prompt_dialog: RoutePromptDialogStore;
     public self_exclusion: SelfExclusionStore;
     public dashboard: DashboardStore;
+    public smart_trading: SmartTradingStore;
+    public smart_auto: SmartAutoStore;
+    public digit_cracker: DigitCrackerStore;
+    public admin: AdminStore;
 
     public chart_store: ChartStore;
     public blockly_store: BlocklyStore;
     public data_collection_store: DataCollectionStore;
 
-    constructor(core: TStores, ws: TWebSocket, dbot: TDbot) {
-        this.ws = ws;
+    public ui: UiStore;
+    public client: ClientStore;
+    public common: CommonStore;
+
+    core: {
+        ui: UiStore;
+        client: ClientStore;
+        common: CommonStore;
+    };
+
+    constructor(dbot: unknown) {
         this.dbot = dbot;
-        this.app = new AppStore(this, core);
-        this.summary_card = new SummaryCardStore(this, core);
+
+        this.ui = new UiStore();
+        this.client = new ClientStore();
+        this.common = new CommonStore();
+
+        this.analysis = new AnalysisStore(this);
+        this.analysis_market = new AnalysisMarketStore(this);
+
+        this.core = {
+            ui: this.ui,
+            client: this.client,
+            common: this.common,
+        };
+
+        this.app = new AppStore(this, this.core);
+        this.summary_card = new SummaryCardStore(this, this.core);
+        this.auto_trader = new AutoTraderStore(this);
+        this.copy_trader = new CopyTraderStore(this);
         this.flyout = new FlyoutStore(this);
         this.flyout_help = new FlyoutHelpStore(this);
         this.google_drive = new GoogleDriveStore(this);
-        this.journal = new JournalStore(this, core);
-        this.load_modal = new LoadModalStore(this, core);
-        this.run_panel = new RunPanelStore(this, core);
+        this.journal = new JournalStore(this, this.core);
+        this.load_modal = new LoadModalStore(this, this.core);
+        this.run_panel = new RunPanelStore(this, this.core);
         this.save_modal = new SaveModalStore(this);
-        this.transactions = new TransactionsStore(this, core);
+        this.transactions = new TransactionsStore(this, this.core);
         this.toolbar = new ToolbarStore(this);
-        this.toolbox = new ToolboxStore(this, core);
+        this.toolbox = new ToolboxStore(this, this.core);
         this.quick_strategy = new QuickStrategyStore(this);
-        this.route_prompt_dialog = new RoutePromptDialogStore(this, core);
-        this.self_exclusion = new SelfExclusionStore(this, core);
-        this.dashboard = new DashboardStore(this, core);
+        this.self_exclusion = new SelfExclusionStore(this, this.core);
+        this.dashboard = new DashboardStore(this, this.core);
+        this.smart_trading = new SmartTradingStore(this);
+        this.smart_auto = new SmartAutoStore(this);
+        this.digit_cracker = new DigitCrackerStore(this);
+        this.admin = new AdminStore();
 
         // need to be at last for dependency
         this.chart_store = new ChartStore(this);
         this.blockly_store = new BlocklyStore(this);
-        this.data_collection_store = new DataCollectionStore(this, core);
+        this.data_collection_store = new DataCollectionStore(this, this.core);
+
+        api_base.common_store = this.common;
     }
 }
