@@ -6,6 +6,7 @@
   "cleanUrls": true,
   "framework": null,
   "rewrites": [
+    { "source": "/bot/(.*)", "destination": "/bot/index.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "env": {
