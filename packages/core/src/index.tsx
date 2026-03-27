@@ -12,7 +12,7 @@ import AppNotificationMessages from './App/Containers/app-notification-messages.
 import { AnalyticsInitializer } from 'Utils/Analytics';
 import { getActiveAccounts, isTmbEnabled } from '@deriv/utils';
 
-AnalyticsInitializer();
+// AnalyticsInitializer();
 if (
     !!window?.localStorage.getItem?.('debug_service_worker') || // To enable local service worker related development
     (!window.location.hostname.startsWith('localhost') && !/binary\.sx/.test(window.location.hostname)) ||
@@ -26,8 +26,9 @@ const has_endpoint_url = checkAndSetEndpointFromUrl();
 // if has endpoint url, APP will be redirected
 if (!has_endpoint_url) {
     const initApp = async () => {
-        const is_tmb_enabled = await isTmbEnabled();
-        const accounts = await getActiveAccounts();
+        // Move heavy setup but don't block render if possible
+        const is_tmb_enabled = await isTmbEnabled().catch(() => false);
+        const accounts = await getActiveAccounts().catch(() => []);
         const root_store = is_tmb_enabled
             ? initStore(AppNotificationMessages, accounts)
             : initStore(AppNotificationMessages);
@@ -36,6 +37,9 @@ if (!has_endpoint_url) {
         if (wrapper) {
             ReactDOM.render(<App useSuspense={false} root_store={root_store} />, wrapper);
         }
+        
+        // Start analytics after app has started rendering
+        setTimeout(AnalyticsInitializer, 100);
     };
 
     initApp();

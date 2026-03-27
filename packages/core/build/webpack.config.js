@@ -49,7 +49,7 @@ module.exports = function (env) {
                 minSize: 100000,
                 minSizeReduction: 102400,
                 minChunks: 1,
-                maxSize: 2500000,
+                maxSize: 800000,
                 maxAsyncRequests: 30,
                 maxInitialRequests: 30,
                 automaticNameDelimiter: '~',
